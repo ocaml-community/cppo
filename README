@@ -1,0 +1,63 @@
+cppo: cpp support for OCaml lexical rules
+-----------------------------------------
+
+These are notes about this possible future tool.
+
+Features
+========
+
+- easy to learn
+- nothing to learn for users familiar with cpp
+- fast
+- easy to install
+- can insert any code anywhere as long as the tokenization is right
+
+
+
+Syntax
+======
+
+Must be the same as basic/standard cpp.
+Must be compatible with OCaml tokenization rules (strings, comments, camlp4
+quotations, etc.).
+
+Usage must be obvious for anyone who has some experience with cpp.
+
+
+Supported languages
+===================
+
+Standard Objective Caml, Objective Caml with camlp4 quotations,
+ocamllex, ocamlyacc. Any language that uses the same tokenization
+rules as OCaml.
+
+Support for languages with different tokenization rules could be
+implemented as well, although it is not a priority. All we need is a
+lexer for each new language.
+
+
+Implementation
+==============
+
+The same lexer.mll could be used for different languages, thanks to a
+subtle use of cppo itself.
+
+
+"Fixing OCaml's limitations"
+============================
+
+Possible add-on features, maybe bad ideas:
+
+
+Support for UTF-8 input?
+------------------------
+
+For error messages to be reported appropriately by the OCaml compiler,
+cppo should dump a pre-parsed syntax tree rather than latin1 source
+code. cppo may not be the right place for such a thing.
+
+Support for end-of-line comments?
+---------------------------------
+
+"##" could be fine and has the advantage of not being a potential
+binary operator in OCaml, but '//' or '--' are more familiar.
