@@ -1,4 +1,8 @@
-#define f(x) x:A
+ \
+#  \
+define \
+f(x) \
+x:A
 #define A 456
 
-f(x)
+f(hohoho)

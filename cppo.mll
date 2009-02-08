@@ -17,6 +17,11 @@ module Defs = Map.Make (
   end
 )
 
+type bool_expr =
+    [ `Defined of string
+    | `Not of bool_expr
+    | `And of (bool_expr * bool_expr)
+    | `Or of (bool_expr * bool_expr) ]
 
 type token = (string * var option)
 
@@ -29,7 +34,8 @@ type value =
     | `Function of (string list * token list)
 
 type env = {
-  add : string -> unit;
+  mutable add : string -> unit;
+  mutable really_add : string -> unit;
   mutable in_macro : bool;
   mutable ignore : bool;
   mutable stack : state Stack.t;
@@ -48,9 +54,15 @@ let string_of_loc (pos1, pos2) =
 
 let error loc s =
   let msg = 
-    sprintf "%s\nSyntax error: %s" (string_of_loc loc) s in
+    sprintf "%s\nError: %s" (string_of_loc loc) s in
   eprintf "%s\n%!" msg;
   failwith msg
+
+let warning loc s =
+  let msg = 
+    sprintf "%s\Warning: %s" (string_of_loc loc) s in
+  eprintf "%s\n%!" msg
+
 
 let loc lexbuf = (lexbuf.lex_start_p, lexbuf.lex_curr_p)
   
@@ -102,22 +114,19 @@ let enter_if lb e cond1 =
   in
   push e (`If cond)
 
-let rec enter_else lb e cond1 =
+let rec enter_else lb e =
   assert (not e.in_macro);
   match top e with
       `Normal -> lexer_error lb "Misplaced #else"
     | `If success0
     | `Elif (success0, _) ->
-	let cond = 
-	  if success0 then false
-	  else cond1
-	in
+	let cond = not success0 in
 	replace e (`Else cond)
 
     | `Else cond0 -> 
 	(* implicit endif *)
 	pop e;
-	enter_else lb e cond1
+	enter_else lb e
 
 let rec enter_elif lb e cond1 =
   assert (not e.in_macro);
@@ -148,17 +157,63 @@ let rec enter_endif lb e =
 
 let new_file lb name =
   lb.lex_curr_p <- { lb.lex_curr_p with pos_fname = name }
-    
-let new_line lb =
+
+let lex_new_lines lb =
+  let n = ref 0 in
+  let s = lb.lex_buffer in
+  for i = lb.lex_start_pos to lb.lex_curr_pos do
+    if s.[i] = '\n' then
+      incr n
+  done;
   let p = lb.lex_curr_p in
   lb.lex_curr_p <- 
     { p with
-	pos_lnum = p.pos_lnum + 1;
+	pos_lnum = p.pos_lnum + n;
 	pos_bol = p.pos_cnum
     }
-    
+
+let new_lines lb n =
+  let p = lb.lex_curr_p in
+  lb.lex_curr_p <- 
+    { p with
+	pos_lnum = p.pos_lnum + n;
+	pos_bol = p.pos_cnum
+    }
+
+(* must start a new line *)
+let update_pos lexbuf p added_chars added_breaks =
+  let cnum = p.pos_cnum + added_chars in
+  lb.lex_curr_p <-
+    { pos_lnum = p.pos_lnum + added_breaks;
+      pos_bol = cnum;
+      pos_cnum = cnum }
+
+let set_lnum lb opt_file lnum =
+  let cnum = p.pos_cnum in
+  let fname =
+    match opt_file with
+	None -> p.pos_fname
+      | Some file -> file
+  in
+  lb.lex_curr_p <-
+    { pos_fname = fname;
+      pos_bol = cnum;
+      pos_cnum = cnum;
+      pos_lnum = lnum }
+	
 let shift lb n =
   lb.lex_curr_p <- { p with pos_cnum = p.pos_cnum + n }
+
+let read_hexdigit c =
+  match c with
+      '0'..'9' -> Char.code c - 48
+    | 'A'..'F' -> Char.code c - 55
+    | 'a'..'z' -> Char.code c - 87
+    | _ -> invalid_arg "read_hexdigit"
+
+let read_hex2 c1 c2 =
+  Char.chr (read_hexdigit c1 * 16 + read_hexdigit c2)
+
 
 }
 
@@ -178,23 +233,114 @@ let prefix_symbol = ['!' '?' '~'] operator_char*
 
 let lident = (lower | '_' identchar) identchar*
 let uident = upper identchar*
+let ident = lident | uident
 
 let blank = [ ' ' '\t' ]
 let space = [ ' ' '\t' '\r' '\n' ]
 
+let line = ( [^'\n'] | '\\' ('\r'? '\n') )* ('\n' | eof)
+
 
 rule line e = parse
-    "#" blank* "define"
-  | "#" blank* "undef"
-  | "#" blank* "ifdef"
-  | "#" blank* "ifndef"
-  | "#" blank* "else"
-  | "#" blank* "elif"
-  | "#" blank* "endif"
-  | "#" blank* "include"
-  | "#" blank* "error"
-  | "#" blank* "warning"
-  | "#" blank* "if"
+    "#"
+      {
+	let initial_loc = loc lexbuf in
+	let (initial_pos1, initial_pos2) = initial_loc in
+	let buf1 = Buffer.create 100 in (* original text *)
+	let buf2 = Buffer.create 100 in (* "\\\n" removed *)
+	let added_breaks = cont_line buf1 buf2 0 lexbuf in
+	let added_chars = Buffer.length buf1 in
+	let single_line = Buffer.contents buf2 in
+	let local_lexbuf = Lexing.from_string real_line in
+	let directive = parse_directive local_lexbuf in
+	update_pos lexbuf initial_pos2 added_chars added_breaks;
+	let final_pos = lexbuf.lex_curr_p in
+	let full_loc = (initial_pos1, final_pos) in
+	match directive with
+	    `Unknown ->
+	      if not e.ignore then
+		e.really_add (Buffer.contents buf1)
+	  | `Define (name, value) ->
+	      if not e.ignore then
+		define e name value
+	  | `Undef name -> 
+	      if not e.ignore then
+		undef e name
+	  | `If expr ->
+	      let cond = eval_bool_expr e expr in
+	      enter_if lb e cond
+	  | `Elif expr ->
+	      let cond = eval_bool_expr e expr in
+	      enter_elif lb e cond
+	  | `Else ->
+	      enter_else lb e
+	  | `Endif ->
+	      enter_endif lb e
+	  | `Include file ->
+	      if not e.ignore then
+		include_file line e file
+	  | `Error s ->
+	      if not e.ignore then 
+		error full_loc s
+	  | `Warning s ->
+	      if not e.ignore then
+		warning full_loc s
+	  | `Line (to_clear, opt_file, n) ->
+	      set_lnum lexbuf opt_file n;
+	      e.add "#";
+	      e.add (Buffer.contents buf1)
+      }
+
+
+and directive = parse
+    blank* "define" blank* (ident as id) "(" 
+      { let l1 = macro_def_args lexbuf in (* TODO *)
+	let l2 = macro_def_value lexbuf in (* TODO *)
+	`Define (id, Some l1, l2) }
+
+  | blank* "undef" blank* (ident as id) blank* eof
+      { `Undef id }
+
+  | blank* "if"    { failwith "not implemented" }
+  | blank* "elif"  { failwith "not implemented" }
+  | blank* "ifdef" blank* (ident as id) blank* eof
+      { `If (`Defined id) }
+
+  | blank* "ifndef" blank* (ident as id) blank* eof
+      { `If (`Not (`Defined id)) }
+
+  | blank* "else" blank* eof   { `Else }
+  | blank* "endif" blank* eof  { `Endif }
+
+  | blank* "include"
+      { let buf = Buffer.create 50 in
+	eval_string buf lexbuf;
+	blank_until_eof lexbuf;
+	`Include (Buffer.contents buf) }
+  
+  | blank* "error"
+      { let buf = Buffer.create 50 in
+	eval_string buf lexbuf;
+	blank_until_eof lexbuf;
+	`Error (Buffer.contents buf) }
+
+  | blank* "warning"
+      { let buf = Buffer.create 50 in
+	eval_string buf lexbuf;
+	blank_until_eof lexbuf;
+	`Warning (Buffer.contents buf) }
+
+  | blank* (['0'-'9']+ as lnum) blank* eof
+      { `Line (None, int_of_string lnum) }
+
+  | blank* (['0'-'9']+ as lnum) blank* '"'
+      { let buf = Buffer.create 50 in
+	eval_string buf lexbuf;
+	blank_until_eof lexbuf;
+	`Line (Some (Buffer.contents buf), int_of_string lnum) }
+
+  |   { `Unknown }
+
 
 and token e = parse
     "__LINE__"
@@ -332,6 +478,49 @@ and string e = parse
   | eof
       { }
       
+
+and eval_string buf = parse
+    '"'
+      {  }
+      
+  | '\\' (['\'' '"' '\\'] as c)
+      { Buffer.add_char buf c;
+	eval_string buf lexbuf }
+
+  | '\\' '\r'? '\n' blank*
+      { eval_string buf lexbuf }
+      
+  | '\\' (digit digit digit as s)
+      { Buffer.add_char buf (Char.chr (string_of_int s));
+	eval_string buf lexbuf }
+      
+  | '\\' 'x' (hexdigit as c1) (hexdigit as c2)
+      { Buffer.add_char buf (read_hex2 c1 c2);
+	eval_string buf lexbuf }
+      
+  | '\\' 'b'
+      { Buffer.add_char buf '\b';
+	eval_string buf lexbuf }
+      
+  | '\\' 'n'
+      { Buffer.add_char buf '\n';
+	eval_string buf lexbuf }
+      
+  | '\\' 'r'
+      { Buffer.add_char buf '\r';
+	eval_string buf lexbuf }
+      
+  | '\\' 't'
+      { Buffer.add_char buf '\t';
+	eval_string buf lexbuf }
+      
+  | [^ '"' '\\']+
+      { e.add (lexeme lexbuf);
+	string e lexbuf }
+      
+  | eof
+      { lexer_error lexbuf "Unterminated string literal" }
+      
       
 and quotation e = parse
     ">>"
@@ -353,6 +542,9 @@ and quotation e = parse
   | eof 
       { }
 
+and blank_until_eof = parse
+    blank* eof { }
+  |            { failwith "syntax error" }
 
 {
   let () =
@@ -376,12 +568,16 @@ and quotation e = parse
     let env =
       let st = Stack.create () in
       Stack.add st `Normal;
-      {
+      let e = {
 	add = print_string;
+	really_add = print_string;
 	in_macro = false;
-	ignore = false;
+	ignore = ign;
 	stack st
       }
+      in
+      e.add <- (fun s -> if not e.ignore then e.really_add s);
+      e
     in
 
     List.iter (
