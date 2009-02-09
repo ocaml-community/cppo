@@ -4,18 +4,13 @@
 open Printf
 open Lexing
 
+open Cppo_types
+
 type state =
     [ `Normal
     | `If of bool (* true/false 'if' block = local success *)
     | `Else of bool (* success so far *)
     | `Elif of (bool * bool) (* (success so far, local success) *) ]
-
-module Defs = Map.Make (
-  struct 
-    type t = string
-    let compare = String.compare
-  end
-)
 
 type bool_expr =
     [ `Defined of string
@@ -23,49 +18,23 @@ type bool_expr =
     | `And of (bool_expr * bool_expr)
     | `Or of (bool_expr * bool_expr) ]
 
-type token = (string * var option)
-
-and var =
-    [ `Cvar of string
-    | `Fvar of (string * token list) ]
-
-type value =
-    [ `Constant of string
-    | `Function of (string list * token list)
-
 type env = {
   mutable add : string -> unit;
   mutable really_add : string -> unit;
   mutable in_macro : bool;
   mutable ignore : bool;
-  mutable stack : state Stack.t;
-  mutable defs : value Defs.t
+  mutable stack : state Stack.t; (* used for conditionals *)
+  mutable defs : defs
 }
 
 
 
-let string_of_loc (pos1, pos2) =
-  let line1 = pos1.pos_lnum
-  and start1 = pos1.pos_bol in
-  Printf.sprintf "File %S, line %i, characters %i-%i"
-    pos1.pos_fname line1
-    (pos1.pos_cnum - start1)
-    (pos2.pos_cnum - start1)
-
-let error loc s =
-  let msg = 
-    sprintf "%s\nError: %s" (string_of_loc loc) s in
-  eprintf "%s\n%!" msg;
-  failwith msg
-
-let warning loc s =
-  let msg = 
-    sprintf "%s\Warning: %s" (string_of_loc loc) s in
-  eprintf "%s\n%!" msg
-
-
 let loc lexbuf = (lexbuf.lex_start_p, lexbuf.lex_curr_p)
-  
+
+
+let add_line_directive e pos =
+  if not e.ignore then
+    e.really_add (make_line_directive pos)
 
 let lexer_error lexbuf descr =
   error (loc lexbuf) descr
@@ -214,7 +183,6 @@ let read_hexdigit c =
 let read_hex2 c1 c2 =
   Char.chr (read_hexdigit c1 * 16 + read_hexdigit c2)
 
-
 }
 
 let upper = ['A'-'Z' '\192'-'\214' '\216'-'\222']
@@ -242,7 +210,7 @@ let line = ( [^'\n'] | '\\' ('\r'? '\n') )* ('\n' | eof)
 
 
 rule line e = parse
-    "#"
+    blank* "#" as w
       {
 	let initial_loc = loc lexbuf in
 	let (initial_pos1, initial_pos2) = initial_loc in
@@ -287,9 +255,11 @@ rule line e = parse
 		warning full_loc s
 	  | `Line (to_clear, opt_file, n) ->
 	      set_lnum lexbuf opt_file n;
-	      e.add "#";
+	      e.add w;
 	      e.add (Buffer.contents buf1)
       }
+
+  | ""  { token e lexbuf }
 
 
 and directive = parse
@@ -339,18 +309,18 @@ and directive = parse
 	blank_until_eof lexbuf;
 	`Line (Some (Buffer.contents buf), int_of_string lnum) }
 
-  |   { `Unknown }
+  | ""  { `Unknown }
 
 
 and token e = parse
     "__LINE__"
-      { e.add lexbuf (string_of_int (current_line lexbuf));
-	e.add_line_directive lexbuf;
+      { e.add (string_of_int (current_line lexbuf));
+	add_line_directive e (snd (loc lexbuf));
 	token e lexbuf }
 
   | "__FILE__"
-      { e.add lexbuf (sprintf "%S" (current_file lexbuf));
-	e.add_line_directive lexbuf;
+      { e.add (sprintf "%S" (current_file lexbuf));
+	add_line_directive e (snd (loc lexbuf));
 	token e lexbuf }
 
   | uident
@@ -494,7 +464,7 @@ and eval_string buf = parse
       { Buffer.add_char buf (Char.chr (string_of_int s));
 	eval_string buf lexbuf }
       
-  | '\\' 'x' (hexdigit as c1) (hexdigit as c2)
+  | '\\' 'x' (hex as c1) (hex as c2)
       { Buffer.add_char buf (read_hex2 c1 c2);
 	eval_string buf lexbuf }
       
@@ -544,7 +514,7 @@ and quotation e = parse
 
 and blank_until_eof = parse
     blank* eof { }
-  |            { failwith "syntax error" }
+  | ""         { failwith "syntax error" }
 
 {
   let () =
@@ -573,7 +543,7 @@ and blank_until_eof = parse
 	really_add = print_string;
 	in_macro = false;
 	ignore = ign;
-	stack st
+	stack st;
       }
       in
       e.add <- (fun s -> if not e.ignore then e.really_add s);

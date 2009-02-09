@@ -1,7 +1,7 @@
 VERSION = 0.5
 
 ifndef PREFIX
-  PREFIX := /usr/local
+  PREFIX = /usr/local
 endif
 export PREFIX
 
@@ -10,17 +10,22 @@ export PREFIX
 
 default: opt
 
-all: cppo.ml
-	ocamlc -o cppo cppo.ml
+ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
 
-opt: cppo.ml
-	ocamlopt -o cppo cppo.ml
+all: $(ML)
+	ocamlc -o cppo $(ML)
 
-cppo.ml: cppo.mll
+opt: $(ML)
+	ocamlopt -o cppo $(ML)
+
+cppo.ml: cppo.mll cppo_types.ml
 	ocamllex cppo.mll
+
+cppo_parser.ml: cppo_parser.mly cppo_types.ml
+	ocamlyacc cppo_parser.mly
 
 install:
 	install cppo $(PREFIX)/bin
 
 clean:
-	rm -f *.cm[iox] cppo.ml
+	rm -f *.cm[iox] cppo_parser.mli cppo_parser.ml cppo.ml
