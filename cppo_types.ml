@@ -3,12 +3,8 @@
 open Printf
 open Lexing
 
-module Defs = Map.Make (
-  struct 
-    type t = string
-    let compare = String.compare
-  end
-)
+module String_set = Set.Make (String)
+module String_map = Map.Make (String)
 
 type macro_value =
     [ `Constant of string
@@ -18,8 +14,8 @@ and macro_token =
     [ `Var of string
     | `Text of string ]
 
-type macro_defs = macro_value Defs.t
-type string_defs = string Defs.t
+type macro_defs = macro_value String_map.t
+type string_defs = string String_map.t
 
 type loc = position * position
 

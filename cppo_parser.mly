@@ -34,7 +34,7 @@ top:
       { let loc, defs, name = $1 in
 	let arg_list, arg_text = $3 in
 	try 
-	  match Defs.find name (defs : macro_defs) with
+	  match String_map.find name (defs : macro_defs) with
 	      `Constant _ -> 
 		(* this is not an error for cpp, but really error-prone. *)
 		error loc
@@ -58,13 +58,13 @@ top:
 		else
 		  (* unlike cpp we restore the environment from the closure. *)
 		  let defs : string_defs =
-		    List.fold_left2 (fun defs k s -> Defs.add k s defs) 
-		      Defs.empty arg_names arg_list
+		    List.fold_left2 (fun defs k s -> String_map.add k s defs) 
+		      String_map.empty arg_names arg_list
 		  in
 		  List.map (
 		    function
 			`Var name ->
-			  (try Defs.find name defs
+			  (try String_map.find name defs
 			   with Not_found -> assert false)
 		      | `Text s ->
 			  s
@@ -77,7 +77,7 @@ top:
 | IDENT OPEN args error { unclosed "(" 2 ")" 4 }
 
 | IDENT  { let loc, defs, name = $1 in
-	   match Defs.find name defs with
+	   match String_map.find name defs with
 	       `Constant s -> [ s ]
 	     | `Function (arg_names, _) ->
 		 (* this is not an error for cpp, but really error-prone. *)

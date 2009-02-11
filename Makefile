@@ -13,10 +13,10 @@ default: opt
 ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
 
 all: $(ML)
-	ocamlc -o cppo $(ML)
+	ocamlc -o cppo -dtypes $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo $(ML)
+	ocamlopt -o cppo -dtypes $(ML)
 
 cppo.ml: cppo.mll cppo_types.ml
 	ocamllex cppo.mll
@@ -28,4 +28,4 @@ install:
 	install cppo $(PREFIX)/bin
 
 clean:
-	rm -f *.cm[iox] cppo_parser.mli cppo_parser.ml cppo.ml
+	rm -f *.cm[iox] *.annot cppo_parser.mli cppo_parser.ml cppo.ml

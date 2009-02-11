@@ -23,8 +23,9 @@ type env = {
   mutable really_add : string -> unit;
   mutable in_macro : bool;
   mutable ignore : bool;
-  mutable stack : state Stack.t; (* used for conditionals *)
-  mutable defs : defs
+  stack : state Stack.t; (* used for conditionals *)
+  mutable defs : macro_defs;
+  parent_files : string Stack.t; (* to prevent recursive inclusion *)
 }
 
 
@@ -41,10 +42,10 @@ let lexer_error lexbuf descr =
 
 
 let define e name value =
-  e.defs <- Defs.add name value e.defs
+  e.defs <- String_map.add name value e.defs
 
 let undef e name =
-  e.defs <- Defs.remove name e.defs
+  e.defs <- String_map.remove name e.defs
 
 
 let top e =
@@ -60,7 +61,7 @@ let set_ignore e =
 	e.ignore <- not cond
 
 let push e x = 
-  Stack.push e.stack x;
+  Stack.push x e.stack;
   set_ignore e
 
 let pop e = 
@@ -72,11 +73,21 @@ let replace e x =
   push e x
 
 
+let eval_bool_expr e x =
+  let rec eval e = function
+      `Defined s -> String_map.mem s e.defs
+    | `Not x -> not (eval e x)
+    | `And (x, y) -> eval e x && eval e y
+    | `Or (x, y) -> eval e x || eval e y
+  in
+  eval e x
+
+
 let enter_if lb e cond1 =
   assert (not e.in_macro);
   let cond =
     match top e with
-	`Normal -> cond
+	`Normal -> cond1
       | `If cond0 -> cond0 && cond1
       | `Else cond0 -> cond0 && cond1
       | `Elif (_, cond0) -> cond0 && cond1
@@ -99,28 +110,27 @@ let rec enter_else lb e =
 
 let rec enter_elif lb e cond1 =
   assert (not e.in_macro);
-  let cond =
-    match top e with
-	`Normal -> lexer_error lb "Misplaced #elif"
-      | `If success0
-      | `Elif (success0, _) ->
-	  let cond = 
-	    if success0 then false
-	    else cond1
-	  in
-	  replace e (`Elif (success0 || cond, cond))
-
-      | `Else cond0 ->
-	  (* implicit endif *)
-	  pop e;
-	  enter_elif lb e cond1
-
+  match top e with
+      `Normal -> lexer_error lb "Misplaced #elif"
+    | `If success0
+    | `Elif (success0, _) ->
+	let cond = 
+	  if success0 then false
+	  else cond1
+	in
+	replace e (`Elif (success0 || cond, cond))
+	  
+    | `Else cond0 ->
+	(* implicit endif *)
+	pop e;
+	enter_elif lb e cond1
+	  
 let rec enter_endif lb e =
   assert (not e.in_macro);
   match top e with
       `Normal -> lexer_error lb "Misplaced #endif"
     | `If _
-    | `Elif _ ->
+    | `Elif _
     | `Else _ -> pop e
 
 
@@ -137,7 +147,7 @@ let lex_new_lines lb =
   let p = lb.lex_curr_p in
   lb.lex_curr_p <- 
     { p with
-	pos_lnum = p.pos_lnum + n;
+	pos_lnum = p.pos_lnum + !n;
 	pos_bol = p.pos_cnum
     }
 
@@ -150,14 +160,16 @@ let new_lines lb n =
     }
 
 (* must start a new line *)
-let update_pos lexbuf p added_chars added_breaks =
+let update_pos lb p added_chars added_breaks =
   let cnum = p.pos_cnum + added_chars in
   lb.lex_curr_p <-
-    { pos_lnum = p.pos_lnum + added_breaks;
+    { pos_fname = p.pos_fname;
+      pos_lnum = p.pos_lnum + added_breaks;
       pos_bol = cnum;
       pos_cnum = cnum }
 
 let set_lnum lb opt_file lnum =
+  let p = lb.lex_curr_p in
   let cnum = p.pos_cnum in
   let fname =
     match opt_file with
@@ -171,6 +183,7 @@ let set_lnum lb opt_file lnum =
       pos_lnum = lnum }
 	
 let shift lb n =
+  let p = lb.lex_curr_p in
   lb.lex_curr_p <- { p with pos_cnum = p.pos_cnum + n }
 
 let read_hexdigit c =
@@ -183,6 +196,25 @@ let read_hexdigit c =
 let read_hex2 c1 c2 =
   Char.chr (read_hexdigit c1 * 16 + read_hexdigit c2)
 
+let stack_mem st x =
+  try
+    Stack.iter (fun y -> if x = y then raise Exit) st;
+    true
+  with Exit -> false
+
+let include_file loc lexer e file =
+  if stack_mem e.parent_files file then
+    error loc (sprintf "Recursive inclusion of file %S" file)
+  else (
+    Stack.push file e.parent_files;
+    let ic = open_in file in
+    let lb = Lexing.from_channel ic in
+    new_file lb file;
+    add_line_directive e lb.lex_curr_p;
+    lexer e lb;
+    close_in ic;
+    ignore (Stack.pop e.parent_files)
+  )
 }
 
 let upper = ['A'-'Z' '\192'-'\214' '\216'-'\222']
@@ -219,12 +251,12 @@ rule line e = parse
 	let added_breaks = cont_line buf1 buf2 0 lexbuf in
 	let added_chars = Buffer.length buf1 in
 	let single_line = Buffer.contents buf2 in
-	let local_lexbuf = Lexing.from_string real_line in
-	let directive = parse_directive local_lexbuf in
+	let local_lexbuf = Lexing.from_string single_line in
+	let d = directive local_lexbuf in
 	update_pos lexbuf initial_pos2 added_chars added_breaks;
 	let final_pos = lexbuf.lex_curr_p in
 	let full_loc = (initial_pos1, final_pos) in
-	match directive with
+	match d with
 	    `Unknown ->
 	      if not e.ignore then
 		e.really_add (Buffer.contents buf1)
@@ -236,17 +268,17 @@ rule line e = parse
 		undef e name
 	  | `If expr ->
 	      let cond = eval_bool_expr e expr in
-	      enter_if lb e cond
+	      enter_if lexbuf e cond
 	  | `Elif expr ->
 	      let cond = eval_bool_expr e expr in
-	      enter_elif lb e cond
+	      enter_elif lexbuf e cond
 	  | `Else ->
-	      enter_else lb e
+	      enter_else lexbuf e
 	  | `Endif ->
-	      enter_endif lb e
+	      enter_endif lexbuf e
 	  | `Include file ->
 	      if not e.ignore then
-		include_file line e file
+		include_file full_loc line e file
 	  | `Error s ->
 	      if not e.ignore then 
 		error full_loc s
@@ -260,6 +292,19 @@ rule line e = parse
       }
 
   | ""  { token e lexbuf }
+
+
+and cont_line buf1 buf2 n = parse
+    [^'\n']+ as s
+      { Buffer.add_string buf1 s;
+	Buffer.add_string buf2 s;
+	cont_line buf1 buf2 n lexbuf }
+  | "\\" ('\r'? '\n' as s2) as s1
+      { Buffer.add_string buf1 s1;
+	Buffer.add_string buf2 s2;
+	cont_line buf1 buf2 (n + 1) lexbuf }
+  | '\n'
+      { n + 1 }
 
 
 and directive = parse
@@ -390,7 +435,7 @@ and token e = parse
       (['e' 'E'] ['+' '-']? digit (digit | '_')* )? 
 
   | _
-    { e.add (lexeme lexbuf));
+    { e.add (lexeme lexbuf);
       token e lexbuf }
 
   | eof 
@@ -543,7 +588,7 @@ and blank_until_eof = parse
 	really_add = print_string;
 	in_macro = false;
 	ignore = ign;
-	stack st;
+	stack = st;
       }
       in
       e.add <- (fun s -> if not e.ignore then e.really_add s);
@@ -551,9 +596,11 @@ and blank_until_eof = parse
     in
 
     List.iter (
-      fun (op, close) ->
+      fun (fname, op, close) ->
 	let lb = Lexing.from_channel (op ()) in
 	try 
+	  new_file lb e fname;
+	  add_line_directive e lb.lex_curr_p;
 	  line env lb;
 	  close ()
 	with ex ->
