@@ -308,16 +308,20 @@ and cont_line buf1 buf2 n = parse
 
 
 and directive = parse
-    blank* "define" blank* (ident as id) "(" 
+    blank* "define" blank+ (ident as id) "(" 
       { let l1 = macro_def_args lexbuf in (* TODO *)
 	let l2 = macro_def_value lexbuf in (* TODO *)
 	`Define (id, Some l1, l2) }
 
+  | blank* "define" blank+ (ident as id)
+      { let l2 = macro_def_value lexbuf in (* TODO *)
+	`Define (id, None, l2) }
+
   | blank* "undef" blank* (ident as id) blank* eof
       { `Undef id }
 
-  | blank* "if"    { failwith "not implemented" }
-  | blank* "elif"  { failwith "not implemented" }
+  | blank* "if"    { failwith "not implemented" (* TODO *) }
+  | blank* "elif"  { failwith "not implemented" (* TODO *) }
   | blank* "ifdef" blank* (ident as id) blank* eof
       { `If (`Defined id) }
 
