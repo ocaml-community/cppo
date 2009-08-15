@@ -10,7 +10,8 @@ export PREFIX
 
 default: opt
 
-ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
+# ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
+ML = cppo_types.ml cppo_eval.ml
 
 all: $(ML)
 	ocamlc -o cppo -dtypes $(ML)
@@ -18,11 +19,11 @@ all: $(ML)
 opt: $(ML)
 	ocamlopt -o cppo -dtypes $(ML)
 
-cppo.ml: cppo.mll cppo_types.ml
-	ocamllex cppo.mll
+#cppo.ml: cppo.mll cppo_types.ml
+#	ocamllex cppo.mll
 
-cppo_parser.ml: cppo_parser.mly cppo_types.ml
-	ocamlyacc cppo_parser.mly
+#cppo_parser.ml: cppo_parser.mly cppo_types.ml
+#	ocamlyacc cppo_parser.mly
 
 install:
 	install cppo $(PREFIX)/bin

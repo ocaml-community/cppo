@@ -12,12 +12,6 @@ type state =
     | `Else of bool (* success so far *)
     | `Elif of (bool * bool) (* (success so far, local success) *) ]
 
-type bool_expr =
-    [ `Defined of string
-    | `Not of bool_expr
-    | `And of (bool_expr * bool_expr)
-    | `Or of (bool_expr * bool_expr) ]
-
 type env = {
   mutable add : string -> unit;
   mutable really_add : string -> unit;

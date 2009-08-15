@@ -18,7 +18,10 @@
     error (rhs_loc num) s
 %}
 %token < Cppo_types.loc * string > TEXT
-%token < Cppo_types.loc * Cppo_types.macro_defs * string > IDENT
+%token < Cppo_types.loc * string > IDENT
+%token < Cppo_types.loc * string > DEF
+%token < Cppo_types.loc * string > DEFUN
+
 %token < Cppo_types.loc * string > OPEN CLOSE COMMA
 %token < Cppo_types.loc > EOF
 %start all
