@@ -17,8 +17,8 @@
     error (rhs_loc num) s
 %}
 
-%token DEFINED OP_PAREN CL_PAREN NOT AND OR EQ LT GT NE LE GE
-       PLUS MINUS TIMES SLASH MOD LNOT LSL LSR LAND LOR LXOR EOF
+%token TRUE FALSE DEFINED OP_PAREN CL_PAREN NOT AND OR EQ LT GT NE LE GE
+       PLUS MINUS STAR SLASH MOD LNOT LSL LSR LAND LOR LXOR EOF
 
 %token < int64 > INT
 %token < string > IDENT
@@ -27,7 +27,7 @@
 %left AND
 
 %left PLUS MINUS
-%left TIMES SLASH
+%left STAR SLASH
 %left MOD LSL LSR LAND LOR LXOR
 %nonassoc NOT
 %nonassoc LNOT
@@ -42,6 +42,8 @@ main:
 ;
 
 expr:
+  | TRUE                            { `True }
+  | FALSE                           { `False }
   | DEFINED OP_PAREN IDENT CL_PAREN { `Defined $3 }
   | OP_PAREN expr CL_PAREN          { $2 }
   | NOT expr                        { `Not $2 }
@@ -61,8 +63,14 @@ aexpr:
   | OP_PAREN aexpr CL_PAREN  { $2 }
   | aexpr PLUS aexpr         { `Add ($1, $3) }
   | aexpr MINUS aexpr        { `Sub ($1, $3) }
-  | aexpr TIMES aexpr        { `Mul ($1, $3) }
+  | aexpr STAR aexpr         { `Mul ($1, $3) }
   | aexpr SLASH aexpr        { `Div (rhs_loc2 1 3, $1, $3) }
   | aexpr MOD aexpr          { `Mod (rhs_loc2 1 3, $1, $3) }
+  | aexpr LSL aexpr          { `Lsl ($1, $3) }
+  | aexpr LSR aexpr          { `Lsr ($1, $3) }
+  | aexpr LAND aexpr         { `Land ($1, $3) }
+  | aexpr LOR aexpr          { `Lor ($1, $3) }
+  | aexpr LXOR aexpr         { `Lxor ($1, $3) }
+  | LNOT aexpr               { `Lnot $2 }
   | MINUS aexpr %prec UMINUS { `Neg $2 }
 ;

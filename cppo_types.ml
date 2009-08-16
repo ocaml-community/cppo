@@ -9,7 +9,9 @@ module String_map = Map.Make (String)
 type loc = position * position
 
 type bool_expr =
-    [ `Defined of string
+    [ `True
+    | `False
+    | `Defined of string
     | `Not of bool_expr (* not *)
     | `And of (bool_expr * bool_expr) (* && *)
     | `Or of (bool_expr * bool_expr) (* || *)

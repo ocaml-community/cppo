@@ -52,12 +52,14 @@ let compact_re = Str.regexp "^[ \t\n\r]*\\([^ \t\n\r]*\\)[ \t\n\r]*$"
 let parse_int loc s0 = 
   assert (Str.string_match compact_re s0 0);
   let s = Str.matched_group 1 s0 in
-  try Int64.of_string (s ^ "L")
-  with _ -> error loc (sprintf "Not an int literal: %S" s0)
+  try Int64.of_string s
+  with _ -> error loc (sprintf "Not a valid int literal: %S" s0)
 
 let rec eval_bool env (cond : bool_expr) =
   match cond with
-      `Defined name -> String_map.mem name env
+      `True -> true
+    | `False -> false
+    | `Defined name -> String_map.mem name env
     | `Not cond -> not (eval_bool env cond)
     | `And (cond1, cond2) -> 
 	eval_bool env cond1 && eval_bool env cond2
