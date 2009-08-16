@@ -11,13 +11,16 @@ export PREFIX
 default: opt
 
 # ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
-ML = cppo_types.ml cppo_eval.ml
+ML = cppo_types.ml cppo_test_parser.mli cppo_test_parser.ml cppo_eval.ml
 
 all: $(ML)
-	ocamlc -o cppo -dtypes $(ML)
+	ocamlc -o cppo -dtypes str.cma $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo -dtypes $(ML)
+	ocamlopt -o cppo -dtypes str.cmxa $(ML)
+
+cppo_test_parser.ml: cppo_test_parser.mly cppo_types.ml
+	ocamlyacc cppo_test_parser.mly
 
 #cppo.ml: cppo.mll cppo_types.ml
 #	ocamllex cppo.mll

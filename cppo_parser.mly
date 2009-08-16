@@ -17,13 +17,18 @@
   let syntax_error s num =
     error (rhs_loc num) s
 %}
-%token < Cppo_types.loc * string > TEXT
-%token < Cppo_types.loc * string > IDENT
-%token < Cppo_types.loc * string > DEF
-%token < Cppo_types.loc * string > DEFUN
 
-%token < Cppo_types.loc * string > OPEN CLOSE COMMA
+/* Directives */
+%token < Cppo_types.loc * string > DEF DEFUN INCLUDE WARNING ERROR
+%token < Cppo_types.loc > ENDEF ELSE ENDIF
+%token < Cppo_types.loc * Cppo_types.bool_expr > IF ELIF
+
+/* Regular program */
+%token < Cppo_types.loc > OP_PAREN CL_PAREN COMMA
+%token < Cppo_types.loc * string > TEXT IDENT
+
 %token < Cppo_types.loc > EOF
+
 %start all
 %type < string list > all
 %%

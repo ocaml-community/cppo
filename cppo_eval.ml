@@ -48,17 +48,71 @@ object
 end
 
 
-let rec eval_bool_expr env cond =
+let compact_re = Str.regexp "^[ \t\n\r]*\\([^ \t\n\r]*\\)[ \t\n\r]*$"
+let parse_int loc s0 = 
+  assert (Str.string_match compact_re s0 0);
+  let s = Str.matched_group 1 s0 in
+  try Int64.of_string (s ^ "L")
+  with _ -> error loc (sprintf "Not an int literal: %S" s0)
+
+let rec eval_bool env (cond : bool_expr) =
   match cond with
       `Defined name -> String_map.mem name env
-    | `Not cond -> not (eval_bool_expr env cond)
+    | `Not cond -> not (eval_bool env cond)
     | `And (cond1, cond2) -> 
-	eval_bool_expr env cond1 && eval_bool_expr env cond2
+	eval_bool env cond1 && eval_bool env cond2
     | `Or (cond1, cond2) -> 
-	eval_bool_expr env cond1 || eval_bool_expr env cond2
+	eval_bool env cond1 || eval_bool env cond2
+    | `Eq (a, b) -> Int64.compare (eval_int env a) (eval_int env b) = 0
+    | `Lt (a, b) -> Int64.compare (eval_int env a) (eval_int env b) < 0
+    | `Gt (a, b) -> Int64.compare (eval_int env a) (eval_int env b) > 0
 
+and eval_int env (x : arith_expr) =
+  match x with
+      `Int a -> a
+    | `Ident (loc, name) -> 
+	let x = 
+	  try String_map.find name env
+	  with Not_found -> error loc (sprintf "Undefined constant %s" name)
+	in
+	(match x with
+	     `Constant s -> parse_int loc s
+	   | `Function _ -> 
+	       error loc (sprintf "%s is not a constant" name)
+	)
 
-let rec subst_app (env : env) loc name args =
+    | `Neg a -> Int64.neg (eval_int env a)
+    | `Add (a, b) -> Int64.add (eval_int env a) (eval_int env b)
+    | `Sub (a, b) -> Int64.sub (eval_int env a) (eval_int env b)
+    | `Mul (a, b) -> Int64.mul (eval_int env a) (eval_int env b)
+    | `Div (loc, a, b) ->
+	let a = eval_int env a in
+	let b = eval_int env b in
+	if b = 0L then
+	  error loc "Division by zero"
+	else
+	  Int64.div a b
+
+    | `Mod (loc, a, b) -> 
+	let a = eval_int env a in
+	let b = eval_int env b in
+	if b = 0L then
+	  error loc "Division by zero"
+	else
+	  Int64.rem a b
+
+    | `Lnot a -> Int64.lognot (eval_int env a)
+    | `Lsl (a, b) -> 
+	Int64.shift_left
+	  (eval_int env a) (Int64.to_int (eval_int env b))
+    | `Lsr (a, b) -> 
+	Int64.shift_right_logical 
+	  (eval_int env a) (Int64.to_int (eval_int env b))
+    | `Land (a, b) -> Int64.logand (eval_int env a) (eval_int env b)
+    | `Lor (a, b) -> Int64.logor (eval_int env a) (eval_int env b)
+    | `Lxor (a, b) -> Int64.logxor (eval_int env a) (eval_int env b)
+
+and subst_app (env : env) loc name args =
   try
     match String_map.find name env with
 	`Constant _ -> 
@@ -144,7 +198,7 @@ and print_ast (env : env) (ch : out_obj_channel) (x : ast) =
 
     | `Cond (loc, cond, if_true, if_false) ->
 	let x =
-	  if eval_bool_expr env cond then if_true
+	  if eval_bool env cond then if_true
 	  else if_false
 	in
 	print env ch x

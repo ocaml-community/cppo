@@ -38,3 +38,13 @@ f()
 
 #define __LINE__ __LINE__
 __LINE__
+
+ #define xyz 456
+xyz
+
+#if 1 + 1 == \
+             2
+yes
+#else
+no
+#endif
