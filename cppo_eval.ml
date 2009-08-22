@@ -163,27 +163,46 @@ and subst_const (env : env) loc name =
   with
       Not_found -> None
 
+and print_args env ch (l : ast list list) =
+  ch # output_string "(";
+  let is_first = ref true in
+  let env =
+    List.fold_left (
+      fun env x ->
+	if !is_first then
+	  is_first := false
+	else
+	  ch # output_string ", ";
+	print env ch x
+    ) env l
+  in
+  ch # output_string ")";
+  env
+
 
 and print_ast (env : env) (ch : out_obj_channel) (x : ast) =
   match x with
-      `Ident (loc, (name, opt_args), orig_args) ->
+      `Ident (loc, name, opt_args) ->
 	(match opt_args with
 	     None ->
 	       ch # output_string (
 		 match subst_const env loc name with
 		     None -> name
 		   | Some s -> s
-	       )
+	       );
+	       env
+
 	   | Some args ->
 	       let string_args = List.map (to_string env) args in
 	       match subst_app env loc name string_args with
 		   None -> 
 		     ch # output_string name;
-		     ch # output_string orig_args
+		     print_args env ch args
+		       
 		 | Some s ->
-		     ch # output_string s
-	);
-	env
+		     ch # output_string s;
+		     env
+	)
 
     | `Def (loc, name, body) ->
 	let value = to_string env body in

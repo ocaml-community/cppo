@@ -44,8 +44,7 @@ and arith_expr = (* signed int64 *)
     ]
 
 and ast =
-    [ `Ident of (loc * (string * ast list list option) * string)
-	(* (loc, (ident, args), original args string) *)
+    [ `Ident of (loc * string * ast list list option)
     | `Def of (loc * string * ast list)
     | `Defun of (loc * string * string list * ast list)
     | `Undef of (loc * string)
