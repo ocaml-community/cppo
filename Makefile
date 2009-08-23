@@ -20,7 +20,7 @@ all: $(ML)
 opt: $(ML)
 	ocamlopt -o cppo -dtypes str.cmxa $(ML)
 
-cppo_test_parser.ml: cppo_test_parser.mly cppo_types.ml
+cppo_test_parser.mli cppo_test_parser.ml: cppo_test_parser.mly cppo_types.ml
 	ocamlyacc cppo_test_parser.mly
 
 cppo_test_lexer.ml: cppo_test_lexer.mll cppo_types.ml cppo_test_parser.ml
@@ -30,10 +30,10 @@ cppo_test_lexer.ml: cppo_test_lexer.mll cppo_types.ml cppo_test_parser.ml
 #	ocamllex cppo.mll
 
 ifeq ($(DEV),true)
-cppo_parser.ml: cppo_parser.mly cppo_types.ml
-	menhir cppo_parser.mly
+cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml
+	menhir -v cppo_parser.mly
 else
-cppo_parser.ml: cppo_parser.mly cppo_types.ml
+cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml
 	ocamlyacc cppo_parser.mly
 endif
 
@@ -41,7 +41,8 @@ install:
 	install cppo $(PREFIX)/bin
 
 clean:
-	rm -f *.cm[iox] *.annot \
+	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
+		cppo \
 		cppo_parser.mli cppo_parser.ml \
 		cppo_test_parser.mli cppo_test_parser.ml \
 		cppo_test_lexer.ml

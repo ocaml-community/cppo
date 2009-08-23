@@ -82,3 +82,5 @@ let make_line_directive ?(fname = true) pos =
   else
     sprintf "# %i\n%s" pos.pos_lnum spaces
 
+
+let parse_file = ref ((fun file -> assert false) : string -> ast list)

@@ -37,33 +37,37 @@
 
 main:
   ast main { $1 :: $2 }
-| EOF     { [] }
+| EOF      { [] }
+;
 
-ast_list:
-  ast ast_list  { $1 :: $2 }
-|               { [] }
+ast_list0:
+  ast ast_list0  { $1 :: $2 }
+|                { [] }
+;
 
 ast:
   TEXT          { `Text (rhs_loc 1, $1) }
 
-| IDENT OP_PAREN args CL_PAREN
+| IDENT OP_PAREN args1 CL_PAREN
+                /* macro application that receives at least one argument,
+                   possibly empty.  We cannot distinguish syntactically between
+		   zero argument and one empty argument.
+                */
                 { `Ident (rhs_loc2 1 4, $1, Some $3) }
-
-| IDENT OP_PAREN args error 
-                { unclosed "(" 2 ")" 4 }
 
 | IDENT         { `Ident (rhs_loc 1, $1, None) }
 
-| DEF ast_list ENDEF
+| DEF ast_list0 ENDEF
                 { let name = $1 in
 		  let body = $2 in
 		  `Def (rhs_loc2 1 3, name, body) }
 
-| DEFUN def_args CL_PAREN ast_list
+| DEFUN def_args1 CL_PAREN ast_list0 ENDEF
                 { let name = $1 in
 		  let args = $2 in
 		  let body = $4 in
 		  `Defun (rhs_loc2 1 4, name, args, body) }
+
 | UNDEF
                 { `Undef (rhs_loc 1, $1) }
 | WARNING
@@ -71,7 +75,11 @@ ast:
 | ERROR
                 { `Error (rhs_loc 1, $1) }
 
-| IF ast_list elif_list ENDIF
+| INCLUDE
+                { `Include (rhs_loc 1, lazy (!Cppo_types.parse_file $1)) }
+
+
+| IF ast_list0 elif_list ENDIF
                 { let loc = rhs_loc2 1 4 in
 		  let test = $1 in
 		  let if_true = $2 in
@@ -84,25 +92,24 @@ ast:
 		  `Cond (loc, test, if_true, if_false)
 		}
 
-| IF ast_list ELSE ast_list ENDIF
+| IF ast_list0 ELSE ast_list0 ENDIF
                 { `Cond (rhs_loc2 1 5, $1, $2, $4) }
 ;
 
 elif_list:
-  ELIF ast_list elif_list
+  ELIF ast_list0 elif_list
                    { (rhs_loc2 1 3, $1, $2) :: $3 }
 |                  { [] }
-
-
-args:
-  ast_list COMMA args   { $1 :: $3  }
-| ast_list              { [ $1 ] }
-|                       { [] }
 ;
 
-def_args:
-  IDENT COMMA def_args
+
+args1:
+  ast_list0 COMMA args1   { $1 :: $3  }
+| ast_list0               { [ $1 ] }
+;
+
+def_args1:
+  IDENT COMMA def_args1
                    { $1 :: $3 }
 | IDENT            { [ $1 ] }
-|                  { [] }
 ;
