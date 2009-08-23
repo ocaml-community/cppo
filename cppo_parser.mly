@@ -45,6 +45,8 @@ ast_list0:
 |                { [] }
 ;
 
+/* TODO: make lone COMMAs valid only in "main" rule */
+/* TODO: same for parentheses */
 ast:
   TEXT          { `Text (rhs_loc 1, $1) }
 

@@ -48,3 +48,7 @@ yes
 #else
 no
 #endif
+
+#define f1(x,y) f1 x y
+#define abc(x) A x A
+))))abc(f1({1,2}))))
