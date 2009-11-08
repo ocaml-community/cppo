@@ -68,6 +68,7 @@ rule token = parse
   | "mod"     { MOD }
   | "lsl"     { LSL }
   | "lsr"     { LSR }
+  | "asr"     { ASR }
   | "land"    { LAND }
   | "lor"     { LOR }
   | "lxor"    { LXOR }

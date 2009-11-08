@@ -49,6 +49,14 @@ yes
 no
 #endif
 
-#define f1(x,y) f1 x y
-#define abc(x) A x A
-))))abc(f1({1,2}))))
+
+#define z1(x,y) x y
+#define z2(x,y) x y
+z1(z2(a,b),z2(c,d))
+z1(z3(a,b),z3(c,d))
+z1((a,b),(c,d))
+z1({a,b},{c,d})
+
+#define TOTO to\
+to
+TOTO

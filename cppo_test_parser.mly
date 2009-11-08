@@ -18,7 +18,7 @@
 %}
 
 %token TRUE FALSE DEFINED OP_PAREN CL_PAREN NOT AND OR EQ LT GT NE LE GE
-       PLUS MINUS STAR SLASH MOD LNOT LSL LSR LAND LOR LXOR EOF
+       PLUS MINUS STAR SLASH MOD LNOT LSL LSR ASR LAND LOR LXOR EOF
 
 %token < int64 > INT
 %token < string > IDENT
@@ -28,7 +28,7 @@
 
 %left PLUS MINUS
 %left STAR SLASH
-%left MOD LSL LSR LAND LOR LXOR
+%left MOD LSL LSR ASR LAND LOR LXOR
 %nonassoc NOT
 %nonassoc LNOT
 %nonassoc UMINUS
@@ -68,6 +68,7 @@ aexpr:
   | aexpr MOD aexpr          { `Mod (rhs_loc2 1 3, $1, $3) }
   | aexpr LSL aexpr          { `Lsl ($1, $3) }
   | aexpr LSR aexpr          { `Lsr ($1, $3) }
+  | aexpr ASR aexpr          { `Lsr ($1, $3) }
   | aexpr LAND aexpr         { `Land ($1, $3) }
   | aexpr LOR aexpr          { `Lor ($1, $3) }
   | aexpr LXOR aexpr         { `Lxor ($1, $3) }

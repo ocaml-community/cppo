@@ -18,7 +18,7 @@ type bool_expr =
     | `Eq of (arith_expr * arith_expr) (* = *)
     | `Lt of (arith_expr * arith_expr) (* < *)
     | `Gt of (arith_expr * arith_expr) (* > *)
-	(* syntax for additional operators: <=, >= *)
+	(* syntax for additional operators: <>, <=, >= *)
     ]
 
 and arith_expr = (* signed int64 *)
@@ -38,6 +38,7 @@ and arith_expr = (* signed int64 *)
     | `Lnot of arith_expr (* lnot *)
     | `Lsl of (arith_expr * arith_expr) (* lsl *)
     | `Lsr of (arith_expr * arith_expr) (* lsr *)
+    | `Asr of (arith_expr * arith_expr) (* asr *)
     | `Land of (arith_expr * arith_expr) (* land *)
     | `Lor of (arith_expr * arith_expr) (* lor *)
     | `Lxor of (arith_expr * arith_expr) (* lxor *)
@@ -48,11 +49,12 @@ and ast =
     | `Def of (loc * string * ast list)
     | `Defun of (loc * string * string list * ast list)
     | `Undef of (loc * string)
-    | `Include of (loc * ast list lazy_t)
+    | `Include of (loc * string)
     | `Cond of (loc * bool_expr * ast list * ast list)
     | `Error of (loc * string)
     | `Warning of (loc * string)
-    | `Text of (loc * string) ]
+    | `Text of (loc * string)
+    | `Seq of ast list ]
 
 
 

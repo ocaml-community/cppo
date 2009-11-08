@@ -50,6 +50,14 @@ ast_list0:
 ast:
   TEXT          { `Text (rhs_loc 1, $1) }
 
+| OP_PAREN ast_list0 CL_PAREN
+                { `Seq (`Text (rhs_loc 1, "(") :: 
+			  ($2 @
+			     [ `Text (rhs_loc 3, ")") ]
+			  )
+		       )
+		}
+
 | IDENT OP_PAREN args1 CL_PAREN
                 /* macro application that receives at least one argument,
                    possibly empty.  We cannot distinguish syntactically between
@@ -78,7 +86,7 @@ ast:
                 { `Error (rhs_loc 1, $1) }
 
 | INCLUDE
-                { `Include (rhs_loc 1, lazy (!Cppo_types.parse_file $1)) }
+                { `Include (rhs_loc 1, $1) }
 
 
 | IF ast_list0 elif_list ENDIF

@@ -12,7 +12,9 @@ default: opt
 
 # ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
 ML = cppo_types.ml cppo_test_parser.mli cppo_test_parser.ml \
-     cppo_test_lexer.ml cppo_parser.mli cppo_parser.ml cppo_eval.ml
+     cppo_test_lexer.ml cppo_parser.mli cppo_parser.ml \
+     cppo_lexer.ml \
+     cppo_eval.ml cppo_main.ml
 
 all: $(ML)
 	ocamlc -o cppo -dtypes str.cma $(ML)
@@ -26,8 +28,9 @@ cppo_test_parser.mli cppo_test_parser.ml: cppo_test_parser.mly cppo_types.ml
 cppo_test_lexer.ml: cppo_test_lexer.mll cppo_types.ml cppo_test_parser.ml
 	ocamllex cppo_test_lexer.mll
 
-#cppo.ml: cppo.mll cppo_types.ml
-#	ocamllex cppo.mll
+cppo_lexer.ml: cppo_lexer.mll cppo_types.ml cppo_parser.ml
+	ocamllex cppo_lexer.mll
+
 
 ifeq ($(DEV),true)
 cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml

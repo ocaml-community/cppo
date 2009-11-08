@@ -18,224 +18,251 @@ open Cppo_types
 *)
 
 
-type env = macro_value String_map.t
+module S = Set.Make (String)
+module M = Map.Make (String)
 
-and macro_value =
-    [ `Constant of string
-    | `Function of (env * string list * ast list) ]
+let line_directive buf pos =
+  bprintf buf "\n# %i %S\n"
+    pos.Lexing.pos_lnum
+    pos.Lexing.pos_fname;
+  bprintf buf "%s" (String.make (pos.Lexing.pos_cnum - pos.Lexing.pos_bol) ' ')
 
-     
-(* Simplified form of Netchannels.out_obj_channel from ocamlnet *)
-class type out_obj_channel =
-object
-  method output_string : string -> unit
-  method flush : unit -> unit
-  method close_out : unit -> unit
-end
-
-class output_channel oc : out_obj_channel =
-object
-  method output_string s = output_string oc s
-  method flush () = flush oc
-  method close_out () = close_out_noerr oc
-end
-
-class output_buffer buf : out_obj_channel =
-object
-  method output_string s = Buffer.add_string buf s
-  method flush () = ()
-  method close_out () = ()
-end
+let rec add_sep sep last = function
+    [] -> [ last ]
+  | [x] -> [ x; last ]
+  | x :: l -> x :: sep :: add_sep sep last l 
 
 
-let compact_re = Str.regexp "^[ \t\n\r]*\\([^ \t\n\r]*\\)[ \t\n\r]*$"
-let parse_int loc s0 = 
-  assert (Str.string_match compact_re s0 0);
-  let s = Str.matched_group 1 s0 in
-  try Int64.of_string s
-  with _ -> error loc (sprintf "Not a valid int literal: %S" s0)
+let strip s =
+  let len = String.length s in
+  let is_space = function ' ' | '\t' | '\n' | '\r' -> true | _ -> false in
+  let first = 
+    let x = ref len in
+    (try
+       for i = 0 to len - 1 do
+	 if not (is_space s.[i]) then (
+	   x := i;
+	   raise Exit
+	 )
+       done
+     with Exit -> ()
+    );
+    !x
+  in
+  let last =
+    let x = ref (-1) in
+    (try
+       for i = len - 1 downto 0 do
+	 if not (is_space s.[i]) then (
+	   x := i;
+	   raise Exit
+	 )
+       done
+     with Exit -> ()
+    );
+    !x
+  in
+  if first <= last then
+    String.sub s first (last - first + 1)
+  else
+    ""
 
-let rec eval_bool env (cond : bool_expr) =
-  match cond with
-      `True -> true
-    | `False -> false
-    | `Defined name -> String_map.mem name env
-    | `Not cond -> not (eval_bool env cond)
-    | `And (cond1, cond2) -> 
-	eval_bool env cond1 && eval_bool env cond2
-    | `Or (cond1, cond2) -> 
-	eval_bool env cond1 || eval_bool env cond2
-    | `Eq (a, b) -> Int64.compare (eval_int env a) (eval_int env b) = 0
-    | `Lt (a, b) -> Int64.compare (eval_int env a) (eval_int env b) < 0
-    | `Gt (a, b) -> Int64.compare (eval_int env a) (eval_int env b) > 0
+let int_of_string_with_space s =
+  try Some (Int64.of_string (strip s))
+  with _ -> None
 
-and eval_int env (x : arith_expr) =
+let rec eval_int env (x : arith_expr) =
   match x with
-      `Int a -> a
-    | `Ident (loc, name) -> 
-	let x = 
-	  try String_map.find name env
-	  with Not_found -> error loc (sprintf "Undefined constant %s" name)
+      `Int x -> x
+    | `Ident (loc, name) ->
+	let l =
+	  try M.find name env
+	  with Not_found -> error loc (sprintf "Undefined identifier %S" name)
 	in
-	(match x with
-	     `Constant s -> parse_int loc s
-	   | `Function _ -> 
-	       error loc (sprintf "%s is not a constant" name)
+	let text =
+	  List.map (
+	    function
+		`Text s -> s
+	      | _ ->
+		  error loc
+		    (sprintf "Identifier %S is not bound to a constant" name)
+	  ) l
+	in
+	let s = String.concat "" text in
+	(match int_of_string_with_space s with
+	     None -> 
+	       error loc 
+		 (sprintf "Identifier %S is not bound to an int literal" name)
+	   | Some n -> n
 	)
 
-    | `Neg a -> Int64.neg (eval_int env a)
+    | `Neg x -> Int64.neg (eval_int env x)
     | `Add (a, b) -> Int64.add (eval_int env a) (eval_int env b)
     | `Sub (a, b) -> Int64.sub (eval_int env a) (eval_int env b)
     | `Mul (a, b) -> Int64.mul (eval_int env a) (eval_int env b)
     | `Div (loc, a, b) ->
-	let a = eval_int env a in
-	let b = eval_int env b in
-	if b = 0L then
-	  error loc "Division by zero"
-	else
-	  Int64.div a b
+	(try Int64.div (eval_int env a) (eval_int env b)
+	 with Division_by_zero ->
+	   error loc "Division by zero")
 
     | `Mod (loc, a, b) -> 
-	let a = eval_int env a in
-	let b = eval_int env b in
-	if b = 0L then
-	  error loc "Division by zero"
-	else
-	  Int64.rem a b
+	(try Int64.rem (eval_int env a) (eval_int env b)
+	 with Division_by_zero ->
+	   error loc "Division by zero")
 
     | `Lnot a -> Int64.lognot (eval_int env a)
-    | `Lsl (a, b) -> 
-	Int64.shift_left
-	  (eval_int env a) (Int64.to_int (eval_int env b))
-    | `Lsr (a, b) -> 
-	Int64.shift_right_logical 
-	  (eval_int env a) (Int64.to_int (eval_int env b))
+
+    | `Lsl (a, b) ->
+	let n = eval_int env a in
+	let shift = eval_int env b in
+	if shift >= 64L || shift <= 64L then 0L
+	else 
+	  Int64.shift_left n (Int64.to_int shift)
+
+    | `Lsr (a, b) ->
+	let n = eval_int env a in
+	let shift = eval_int env b in
+	if shift >= 64L || shift <= 64L then 0L
+	else 
+	  Int64.shift_right_logical n (Int64.to_int shift)
+
+    | `Asr (a, b) ->
+	let n = eval_int env a in
+	let shift = eval_int env b in
+	if shift >= 64L || shift <= 64L then 0L
+	else 
+	  Int64.shift_right n (Int64.to_int shift)
+
     | `Land (a, b) -> Int64.logand (eval_int env a) (eval_int env b)
     | `Lor (a, b) -> Int64.logor (eval_int env a) (eval_int env b)
     | `Lxor (a, b) -> Int64.logxor (eval_int env a) (eval_int env b)
+	
 
-and subst_app (env : env) loc name args =
-  try
-    match String_map.find name env with
-	`Constant _ -> 
-	  (* this is not an error for cpp, but really error-prone. *)
-	  error loc
-	    (sprintf "Macro %S is applied to %i arguments \
-                      but it is a constant-like macro.\n\
-                      Place it within parentheses."
-	       name (List.length args))
-      | `Function (closure_env, arg_names, body) ->
-	  let arg_n = List.length arg_names in
-	  let arg_c = List.length args in
-	  if arg_n < arg_c then
-	    error loc 
-	      (sprintf "Macro %S is applied to %i arguments \
-                        but expects only %i arguments."
-		 name arg_c arg_n)
-	  else if arg_c < arg_n then
-	    error loc 
-	      (sprintf "Macro %S expects %i arguments \
-                        but is only applied to %i arguments."
-		 name arg_n arg_c)
-	  else
-	    (* unlike cpp we restore the environment from the closure. *)
-	    let env =
-	      List.fold_left2 
-		(fun env k s -> String_map.add k (`Constant s) env) 
-		closure_env arg_names args
-	    in
-	    Some (to_string env body)
-  with
-      Not_found -> None
+let rec eval_bool env (x : bool_expr) =
+  match x with
+      `True -> true
+    | `False -> false
+    | `Defined s -> M.mem s env
+    | `Not x -> not (eval_bool env x)
+    | `And (a, b) -> eval_bool env a && eval_bool env b
+    | `Or (a, b) -> eval_bool env a || eval_bool env b
+    | `Eq (a, b) -> eval_int env a = eval_int env b
+    | `Lt (a, b) -> eval_int env a < eval_int env b
+    | `Gt (a, b) -> eval_int env a > eval_int env b
+
+    
 
 
-and subst_const (env : env) loc name =
-  try
-    match String_map.find name env with
-	`Constant s -> Some s
-      | `Function (_, arg_names, _) ->
-	  (* this is not an error for cpp, but really error-prone. *)
-	  error loc
-	    (sprintf "Macro %S requires %i arguments, \
-                      but none is given.\n\
-                      You may undefine the macro with #undef."
-	       name (List.length arg_names))
-  with
-      Not_found -> None
+let rec parse file ic =
+  let lexbuf = Lexing.from_channel ic in
+  let lexer_env = Cppo_lexer.init file lexbuf in
+  Cppo_parser.main (Cppo_lexer.line lexer_env) lexbuf
 
-and print_args env ch (l : ast list list) =
-  ch # output_string "(";
-  let is_first = ref true in
-  let env =
-    List.fold_left (
-      fun env x ->
-	if !is_first then
-	  is_first := false
-	else
-	  ch # output_string ", ";
-	print env ch x
-    ) env l
-  in
-  ch # output_string ")";
-  env
+and include_file buf included file env =
+  if S.mem file included then
+    failwith (sprintf "Cyclic inclusion of file %S" file)
+  else
+    let ic = open_in_bin file in
+    let l = parse ic in
+    close_in ic;
+    expand_list buf (S.add file included) env l
 
+and expand_list buf included env l =
+  List.fold_left (expand_node buf included) env l
 
-and print_ast (env : env) (ch : out_obj_channel) (x : ast) =
+and expand_node buf included env x =
   match x with
       `Ident (loc, name, opt_args) ->
-	(match opt_args with
-	     None ->
-	       ch # output_string (
-		 match subst_const env loc name with
-		     None -> name
-		   | Some s -> s
-	       );
-	       env
-
-	   | Some args ->
-	       let string_args = List.map (to_string env) args in
-	       match subst_app env loc name string_args with
-		   None -> 
-		     ch # output_string name;
-		     print_args env ch args
-		       
-		 | Some s ->
-		     ch # output_string s;
-		     env
+	let def =
+	  try Some (M.find name env)
+	  with Not_found -> None
+	in
+	(match def, opt_args with
+	     None, None -> expand_node buf included env (`Text name)
+	   | None, Some args ->
+	       let with_sep = 
+		 add_sep [[`Text ","]] [[`Text ")"]] args in
+	       let l = `Text (name ^ "(") :: List.flatten with_sep in
+	       expand_list buf included env l
+		 
+	   | Some (`Defun (_, _, arg_names, _)), None ->
+	       error loc 
+		 (sprintf "%S expects %i arguments but is applied to none." 
+		    name (List.length arg_names))
+		 
+	   | Some (`Def _), Some l ->
+	       error loc 
+		 (sprintf "%S expects no arguments" name)
+		 
+	   | Some (`Def (_, _, l)), None ->
+	       (* should we expand the body? *)
+	       expand_list buf included env l
+		 
+	   | Some (`Defun (loc, _, arg_names, l)), Some args ->
+	       (* should we restore the original environment? *)
+	       let argc = List.length arg_names in
+	       let n = List.length args in
+	       let args =
+		 (* it's ok to pass an empty arg if one arg
+		    is expected *)
+		 if n = 0 && argc = 1 then [[]]
+		 else args
+	       in
+	       if argc <> n then
+		 error loc
+		   (sprintf "%S expects %i arguments but is applied to \
+                               %i arguments."
+		      name argc n)
+	       else
+		 let app_env =
+		   List.fold_left2 (
+		     fun env name l -> M.add name (`Def (loc, name, l)) env
+		   ) env arg_names args
+		 in
+		 ignore (expand_list buf included app_env l);
+		 env
 	)
 
-    | `Def (loc, name, body) ->
-	let value = to_string env body in
-	String_map.add name (`Constant value) env
+    | `Def (loc, name, body) as x -> 
+	M.add name x env
 
-    | `Defun (loc, name, arg_names, body) ->
-	String_map.add name (`Function (env, arg_names, body)) env
+    | `Defun (loc, name, arg_names, body) as x ->
+	M.add name x env
 
     | `Undef (loc, name) ->
-	String_map.remove name env
+	M.remove name env
 
-    | `Include (loc, lz) ->
-	print env ch (Lazy.force lz)
+    | `Include (loc, file) ->
+	include_file buf included file env
 
-    | `Cond (loc, cond, if_true, if_false) ->
-	let x =
-	  if eval_bool env cond then if_true
+    | `Cond (loc, test, if_true, if_false) ->
+	let l =
+	  if eval_bool env test then if_true
 	  else if_false
 	in
-	print env ch x
+	expand_list buf included l
 
-    | `Error (loc, msg) -> error loc msg
+    | `Error (loc, msg) ->
+	error loc msg
 
-    | `Warning (loc, msg) -> warning loc msg; env
+    | `Warning (loc, msg) ->
+	warning loc msg;
+	env
 
-    | `Text (loc, s) -> ch # output_string s; env
+    | `Text (loc, s) ->
+	Buffer.add_string buf s;
+	env
+
+    | `Seq (loc, l) ->
+	expand_list buf included l
 
 
-and print (env : env) (ch : out_obj_channel) l =
-  List.fold_left (fun env x -> print_ast env ch x) env l
+let include_channels buf env l =
+  List.fold_left (
+    fun env (file, open_, close) ->
+      let l = Cppo_eval.parse file (open_ ()) in
+      close ();
+      expand_list buf (S.add file S.empty) env l
+  ) env l
 
-and to_string env body =
-  let buf = Buffer.create 1000 in
-  let ch = new output_buffer buf in
-  ignore (print env ch body);
-  Buffer.contents buf
+
