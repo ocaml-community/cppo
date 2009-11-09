@@ -54,7 +54,10 @@ and ast =
     | `Error of (loc * string)
     | `Warning of (loc * string)
     | `Text of (loc * string)
-    | `Seq of ast list ]
+    | `Seq of ast list
+    | `Line of (string option * int)
+    | `Current_line of loc
+    | `Current_file of loc ]
 
 
 

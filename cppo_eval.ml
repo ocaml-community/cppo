@@ -76,13 +76,17 @@ let rec eval_int env (x : arith_expr) =
       `Int x -> x
     | `Ident (loc, name) ->
 	let l =
-	  try M.find name env
+	  try
+	    match M.find name env with
+		`Def (_, _, l) -> l
+	      | `Defun _ -> 
+		  error loc (sprintf "%S expects arguments" name)
 	  with Not_found -> error loc (sprintf "Undefined identifier %S" name)
 	in
 	let text =
 	  List.map (
 	    function
-		`Text s -> s
+		`Text (_, s) -> s
 	      | _ ->
 		  error loc
 		    (sprintf "Identifier %S is not bound to a constant" name)
@@ -163,7 +167,7 @@ and include_file buf included file env =
     failwith (sprintf "Cyclic inclusion of file %S" file)
   else
     let ic = open_in_bin file in
-    let l = parse ic in
+    let l = parse file ic in
     close_in ic;
     expand_list buf (S.add file included) env l
 
@@ -178,11 +182,11 @@ and expand_node buf included env x =
 	  with Not_found -> None
 	in
 	(match def, opt_args with
-	     None, None -> expand_node buf included env (`Text name)
+	     None, None -> expand_node buf included env (`Text (loc, name))
 	   | None, Some args ->
 	       let with_sep = 
-		 add_sep [[`Text ","]] [[`Text ")"]] args in
-	       let l = `Text (name ^ "(") :: List.flatten with_sep in
+		 add_sep [`Text (loc, ",")] [`Text (loc, ")")] args in
+	       let l = `Text (loc, name ^ "(") :: List.flatten with_sep in
 	       expand_list buf included env l
 		 
 	   | Some (`Defun (_, _, arg_names, _)), None ->
@@ -240,7 +244,7 @@ and expand_node buf included env x =
 	  if eval_bool env test then if_true
 	  else if_false
 	in
-	expand_list buf included l
+	expand_list buf included env l
 
     | `Error (loc, msg) ->
 	error loc msg
@@ -253,16 +257,31 @@ and expand_node buf included env x =
 	Buffer.add_string buf s;
 	env
 
-    | `Seq (loc, l) ->
-	expand_list buf included l
+    | `Seq l ->
+	expand_list buf included env l
+
+    | `Line (opt_file, n) ->
+	(match opt_file with
+	     None -> bprintf buf "\n# %i\n" n
+	   | Some file -> bprintf buf "\n# %i %S\n" n file
+	);
+	env
+
+    | `Current_line (pos, _) ->
+	bprintf buf " %i " pos.Lexing.pos_lnum;
+	env
+
+    | `Current_file (pos, _) ->
+	bprintf buf " %S " pos.Lexing.pos_fname;
+	env
+
+	  
 
 
 let include_channels buf env l =
   List.fold_left (
     fun env (file, open_, close) ->
-      let l = Cppo_eval.parse file (open_ ()) in
+      let l = parse file (open_ ()) in
       close ();
       expand_list buf (S.add file S.empty) env l
   ) env l
-
-

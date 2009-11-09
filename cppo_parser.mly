@@ -22,14 +22,34 @@
 
 /* Directives */
 %token < string > DEF DEFUN UNDEF INCLUDE WARNING ERROR
-%token ENDEF ELSE ENDIF
-%token < Cppo_types.bool_expr > IF ELIF
+%token < (string option * int) > LINE
+%token < Cppo_types.bool_expr > IFDEF
+%token ENDEF IF ELIF ELSE ENDIF ENDTEST
 
-/* Regular program */
-%token OP_PAREN CL_PAREN COMMA
-%token < string > TEXT IDENT
 
+/* Boolean expressions in #if/#elif directives */
+%token OP_PAREN TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
+       PLUS MINUS STAR SLASH MOD LNOT LSL LSR ASR LAND LOR LXOR
+%token < int64 > INT
+
+
+/* Regular program and shared terminals */
+%token CL_PAREN COMMA CURRENT_LINE CURRENT_FILE
+%token < string > TEXT IDENT FUNIDENT
 %token EOF
+
+
+/* Priorities for boolean expressions */
+%left OR
+%left AND
+
+/* Priorities for arithmetics */
+%left PLUS MINUS
+%left STAR SLASH
+%left MOD LSL LSR ASR LAND LOR LXOR
+%nonassoc NOT
+%nonassoc LNOT
+%nonassoc UMINUS
 
 %start main
 %type < Cppo_types.ast list > main
@@ -50,22 +70,19 @@ ast_list0:
 ast:
   TEXT          { `Text (rhs_loc 1, $1) }
 
-| OP_PAREN ast_list0 CL_PAREN
-                { `Seq (`Text (rhs_loc 1, "(") :: 
-			  ($2 @
-			     [ `Text (rhs_loc 3, ")") ]
-			  )
-		       )
-		}
+| CL_PAREN      { `Text (rhs_loc 1, ")") }
 
-| IDENT OP_PAREN args1 CL_PAREN
+| IDENT         { `Ident (rhs_loc 1, $1, None) }
+
+| FUNIDENT args1 CL_PAREN
                 /* macro application that receives at least one argument,
                    possibly empty.  We cannot distinguish syntactically between
 		   zero argument and one empty argument.
                 */
-                { `Ident (rhs_loc2 1 4, $1, Some $3) }
+                { `Ident (rhs_loc2 1 3, $1, Some $2) }
 
-| IDENT         { `Ident (rhs_loc 1, $1, None) }
+| CURRENT_LINE  { `Current_line (rhs_loc 1) }
+| CURRENT_FILE  { `Current_file (rhs_loc 1) }
 
 | DEF ast_list0 ENDEF
                 { let name = $1 in
@@ -89,7 +106,20 @@ ast:
                 { `Include (rhs_loc 1, $1) }
 
 
-| IF ast_list0 elif_list ENDIF
+| IF test ast_list0 elif_list ENDIF
+                { let loc = rhs_loc2 1 5 in
+		  let test = $2 in
+		  let if_true = $3 in
+		  let if_false =
+		    List.fold_right (
+		      fun (loc, test, if_true) if_false ->
+			[`Cond (loc, test, if_true, if_false) ]
+		    ) $4 []
+		  in
+		  `Cond (loc, test, if_true, if_false)
+		}
+
+| IFDEF ast_list0 elif_list ENDIF
                 { let loc = rhs_loc2 1 4 in
 		  let test = $1 in
 		  let if_true = $2 in
@@ -102,13 +132,21 @@ ast:
 		  `Cond (loc, test, if_true, if_false)
 		}
 
-| IF ast_list0 ELSE ast_list0 ENDIF
-                { `Cond (rhs_loc2 1 5, $1, $2, $4) }
+| IFDEF ast error { syntax_error "error" 3 }
+
+| IF test ast_list0 ELSE ast_list0 ENDIF
+                { `Cond (rhs_loc2 1 5, $2, $3, $5) }
+
+| IFDEF ast_list0 ELSE ast_list0 ENDIF
+                { `Cond (rhs_loc2 1 4, $1, $2, $4) }
+
+| LINE          { `Line $1 }
 ;
 
+
 elif_list:
-  ELIF ast_list0 elif_list
-                   { (rhs_loc2 1 3, $1, $2) :: $3 }
+  ELIF test ast_list0 elif_list
+                   { (rhs_loc2 1 4, $2, $3) :: $4 }
 |                  { [] }
 ;
 
@@ -122,4 +160,45 @@ def_args1:
   IDENT COMMA def_args1
                    { $1 :: $3 }
 | IDENT            { [ $1 ] }
+;
+
+test:
+  bexpr ENDTEST { $1 }
+;
+
+/* Boolean expressions after #if or #elif */
+bexpr:
+  | TRUE                            { `True }
+  | FALSE                           { `False }
+  | DEFINED OP_PAREN IDENT CL_PAREN { `Defined $3 }
+  | OP_PAREN bexpr CL_PAREN         { $2 }
+  | NOT bexpr                       { `Not $2 }
+  | bexpr AND bexpr                 { `And ($1, $3) }
+  | bexpr OR bexpr                  { `Or ($1, $3) }
+  | aexpr EQ aexpr                  { `Eq ($1, $3) }
+  | aexpr LT aexpr                  { `Lt ($1, $3) }
+  | aexpr GT aexpr                  { `Gt ($1, $3) }
+  | aexpr NE aexpr                  { `Not (`Eq ($1, $3)) }
+  | aexpr LE aexpr                  { `Not (`Gt ($1, $3)) }
+  | aexpr GE aexpr                  { `Not (`Lt ($1, $3)) }
+;
+
+/* Arithmetic expressions within boolean expressions */
+aexpr:
+  | INT                      { `Int $1 }
+  | IDENT                    { `Ident (rhs_loc 1, $1) }
+  | OP_PAREN aexpr CL_PAREN  { $2 }
+  | aexpr PLUS aexpr         { `Add ($1, $3) }
+  | aexpr MINUS aexpr        { `Sub ($1, $3) }
+  | aexpr STAR aexpr         { `Mul ($1, $3) }
+  | aexpr SLASH aexpr        { `Div (rhs_loc2 1 3, $1, $3) }
+  | aexpr MOD aexpr          { `Mod (rhs_loc2 1 3, $1, $3) }
+  | aexpr LSL aexpr          { `Lsl ($1, $3) }
+  | aexpr LSR aexpr          { `Lsr ($1, $3) }
+  | aexpr ASR aexpr          { `Lsr ($1, $3) }
+  | aexpr LAND aexpr         { `Land ($1, $3) }
+  | aexpr LOR aexpr          { `Lor ($1, $3) }
+  | aexpr LXOR aexpr         { `Lxor ($1, $3) }
+  | LNOT aexpr               { `Lnot $2 }
+  | MINUS aexpr %prec UMINUS { `Neg $2 }
 ;

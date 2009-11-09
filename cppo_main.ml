@@ -11,18 +11,20 @@ let () =
   
   let in_channels = 
     match List.rev !files with
-	[] -> [ (fun () -> stdin), (fun () -> ()) ]
+	[] -> [ "", (fun () -> stdin), (fun () -> ()) ]
       | l -> 
 	  List.map (
 	    fun file -> 
 	      let ic = lazy (open_in file) in
-	      (fun () -> Lazy.force ic), (fun () -> close_in (Lazy.force ic))
+	      file,
+	      (fun () -> Lazy.force ic),
+	      (fun () -> close_in (Lazy.force ic))
 	  ) l
   in
 
   let env = Cppo_eval.M.empty in
   let buf = Buffer.create 10_000 in
-  let env = Cppo_eval.include_channels buf env in_channels in
+  let _env = Cppo_eval.include_channels buf env in_channels in
   print_string (Buffer.contents buf);
   flush stdout
 

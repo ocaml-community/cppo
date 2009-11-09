@@ -60,3 +60,9 @@ z1({a,b},{c,d})
 #define TOTO to\
 to
 TOTO
+
+#ifndef x
+"x" is not defined
+#else
+"x" is defined
+#endif
