@@ -44,17 +44,17 @@ and arith_expr = (* signed int64 *)
     | `Lxor of (arith_expr * arith_expr) (* lxor *)
     ]
 
-and ast =
-    [ `Ident of (loc * string * ast list list option)
-    | `Def of (loc * string * ast list)
-    | `Defun of (loc * string * string list * ast list)
+and node =
+    [ `Ident of (loc * string * node list list option)
+    | `Def of (loc * string * node list)
+    | `Defun of (loc * string * string list * node list)
     | `Undef of (loc * string)
     | `Include of (loc * string)
-    | `Cond of (loc * bool_expr * ast list * ast list)
+    | `Cond of (loc * bool_expr * node list * node list)
     | `Error of (loc * string)
     | `Warning of (loc * string)
     | `Text of (loc * string)
-    | `Seq of ast list
+    | `Seq of node list
     | `Line of (string option * int)
     | `Current_line of loc
     | `Current_file of loc ]
@@ -88,4 +88,4 @@ let make_line_directive ?(fname = true) pos =
     sprintf "# %i\n%s" pos.pos_lnum spaces
 
 
-let parse_file = ref ((fun file -> assert false) : string -> ast list)
+let parse_file = ref ((fun file -> assert false) : string -> node list)
