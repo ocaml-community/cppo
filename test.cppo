@@ -1,0 +1,20 @@
+#define f(x) x+pi
+f(0)
+#define pi 3.14
+f(1)
+#define pi 3.1416
+f(2)
+
+#ifdef g
+"g" is defined
+#else
+"g" is not defined
+#endif
+
+#define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
+debug("a")
+debug("b")
+
+#define a(x) b()
+#define b(x) a()
+a()
