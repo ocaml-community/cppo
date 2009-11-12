@@ -36,9 +36,18 @@ success
 failure
 #endif
 
-#define test_esc \
+#define test_multiline \
 "abc\
  def" \
 (* 123 \
    456 *)
-test_esc
+test_multiline
+
+#define test_args(x,y) x y
+test_args(a,b)
+
+#define test_argc(x) x y
+test_argc(a,b) (* incorrect error message *)
+
+#define test_esc(x) x
+test_esc(\,\)\()
