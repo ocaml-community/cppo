@@ -35,7 +35,8 @@
 
 /* Regular program and shared terminals */
 %token CL_PAREN COMMA CURRENT_LINE CURRENT_FILE
-%token < string > TEXT IDENT FUNIDENT
+%token < string > IDENT FUNIDENT
+%token < (bool * string) > TEXT /* bool is true for space tokens */
 %token EOF
 
 
@@ -61,7 +62,7 @@ main:
 ;
 
 full_node:
-  CL_PAREN  { `Text (rhs_loc 1, ")") }
+  CL_PAREN  { `Text (rhs_loc 1, (false, ")")) }
 | node       { $1 }
 ;
 
@@ -79,10 +80,6 @@ full_node_list0:
 /* TODO: same for parentheses */
 node:
   TEXT          { `Text (rhs_loc 1, $1) }
-
-/*
-| CL_PAREN      { `Text (rhs_loc 1, ")") }
-*/
 
 | IDENT         { `Ident (rhs_loc 1, $1, None) }
 
@@ -134,6 +131,10 @@ node:
 		  `Cond (loc, test, if_true, if_false)
 		}
 
+| IF test full_node_list0 elif_list error
+                { (* BUG? ocamlyacc fails to reduce that rule but not menhir *)
+		  syntax_error "missing #endif" 1 }
+
 | IFDEF full_node_list0 elif_list ENDIF
                 { let loc = rhs_loc2 1 4 in
 		  let test = $1 in
@@ -147,13 +148,20 @@ node:
 		  `Cond (loc, test, if_true, if_false)
 		}
 
-| IFDEF node error { syntax_error "error" 3 }
+| IFDEF full_node_list0 elif_list error
+                { syntax_error "missing #endif" 1 }
 
 | IF test full_node_list0 ELSE full_node_list0 ENDIF
                 { `Cond (rhs_loc2 1 5, $2, $3, $5) }
 
+| IF test full_node_list0 ELSE full_node_list0 error
+                { syntax_error "missing #endif" 1 }
+
 | IFDEF full_node_list0 ELSE full_node_list0 ENDIF
                 { `Cond (rhs_loc2 1 4, $1, $2, $4) }
+
+| IFDEF full_node_list0 ELSE full_node_list0 error
+                { syntax_error "missing #endif" 1 }
 
 | LINE          { `Line $1 }
 ;

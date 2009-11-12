@@ -1,9 +1,11 @@
-#define f(x) x+pi
-f(0)
+#define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
+
 #define pi 3.14
 f(1)
-#define pi 3.1416
+#define f(x) x+pi
 f(2)
+#undef pi
+f(3)
 
 #ifdef g
 "g" is defined
@@ -11,10 +13,32 @@ f(2)
 "g" is not defined
 #endif
 
-#define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
-debug("a")
-debug("b")
 
 #define a(x) b()
 #define b(x) a()
 a()
+
+debug("a")
+debug("b")
+
+#define z 123
+#define y z
+#define x y
+
+#if x lsl 1 = 2*123
+
+#if 1 = 2
+#error "test"
+#endif
+
+success
+#else
+failure
+#endif
+
+#define test_esc \
+"abc\
+ def" \
+(* 123 \
+   456 *)
+test_esc

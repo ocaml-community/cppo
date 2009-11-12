@@ -53,7 +53,7 @@ and node =
     | `Cond of (loc * bool_expr * node list * node list)
     | `Error of (loc * string)
     | `Warning of (loc * string)
-    | `Text of (loc * string)
+    | `Text of (loc * (bool * string)) (* bool is true for space tokens *)
     | `Seq of node list
     | `Line of (string option * int)
     | `Current_line of loc
@@ -69,11 +69,13 @@ let string_of_loc (pos1, pos2) =
     (pos1.pos_cnum - start1)
     (pos2.pos_cnum - start1)
 
+
+exception Cppo_error of string
+
 let error loc s =
   let msg = 
     sprintf "%s\nError: %s" (string_of_loc loc) s in
-  eprintf "%s\n%!" msg;
-  failwith msg
+  raise (Cppo_error msg)
 
 let warning loc s =
   let msg = 
@@ -89,3 +91,5 @@ let make_line_directive ?(fname = true) pos =
 
 
 let parse_file = ref ((fun file -> assert false) : string -> node list)
+
+let dummy_loc = (Lexing.dummy_pos, Lexing.dummy_pos)

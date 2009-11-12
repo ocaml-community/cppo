@@ -24,8 +24,11 @@ let () =
 
   let env = Cppo_eval.M.empty in
   let buf = Buffer.create 10_000 in
-  let _env = Cppo_eval.include_channels buf env in_channels in
+  let _env =
+    try Cppo_eval.include_channels buf env in_channels
+    with Cppo_types.Cppo_error msg ->
+      eprintf "%s\n%!" msg;
+      exit 1
+  in
   print_string (Buffer.contents buf);
   flush stdout
-
-

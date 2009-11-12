@@ -146,28 +146,29 @@ and line e = parse
 		  e.in_directive <- true;
 		  clear e;
 		  add e s;
-		  directive e s lexbuf
+		  directive e lexbuf
 		)
 		else (
 		  e.in_directive <- false;
+		  e.line_start <- false;
 		  clear e;
-		  add e s;
-		  ocaml_token e lexbuf
+		  TEXT (false, s)
 		)
 	}
 
   | ""  { clear e;
 	  token e lexbuf }
 
-and directive e linestart = parse
+and directive e = parse
     blank* "define" dblank1 (ident as id) "(" 
       { DEFUN id }
 
   | blank* "define" dblank1 (ident as id)
       { assert e.in_directive; DEF id }
 
-  | blank* "undef" dblank1 (ident as id) blank* eof
-      { UNDEF id }
+  | blank* "undef" dblank1 (ident as id)
+      { blank_until_eol e lexbuf;
+	UNDEF id }
 
   | blank* "if" dblank1    { e.lexer <- `Test;
 			     IF }
@@ -218,13 +219,15 @@ and directive e linestart = parse
 	blank_until_eol e lexbuf;
 	LINE (Some (get e), int_of_string lnum) }
 
-  | ""  { e.in_directive <- false;
-	  TEXT linestart }
+  | blank* ['a'-'z']*
+      { e.in_directive <- false;
+	add e (lexeme lexbuf);
+	TEXT (false, get e) }
 
 
 and blank_until_eol e = parse
     blank* eof
-  | blank* '\r'? '\n' { e.line_start <- true;
+  | blank* '\r'? '\n' { new_line e lexbuf;
 			e.in_directive <- false }
   | ""                { lexer_error lexbuf "Missing line terminator" }
 
@@ -252,26 +255,27 @@ and ocaml_token e = parse
   | "]" | "_" | "`" | "{" | "{<" | "|" | "|]" | "}" | "~"
   | prefix_symbol 
   | infix_symbol
-  | "'\n'" 
-  | "'\r\n'" 
-  | "'\\\n'"
-  | "'\\\r\n'"
   | "'" ([^'\'''\\'] 
   | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
 
-      { TEXT (lexeme lexbuf) }
+      { TEXT (false, lexeme lexbuf) }
+
+  | "'\n'" 
+  | "'\r\n'" 
+      { new_line e lexbuf;
+	TEXT (false, lexeme lexbuf) }
 
   | blank+
-      { TEXT (lexeme lexbuf) }
+      { TEXT (true, lexeme lexbuf) }
 
-  | '\'' '\r'? '\n'
+  | '\\' ('\r'? '\n' as nl)
 
       {
 	new_line e lexbuf;
 	if e.in_directive then
-	  ocaml_token e lexbuf
+	  TEXT (true, nl)
 	else
-	  TEXT (lexeme lexbuf)
+	  TEXT (false, lexeme lexbuf)
       }
 
   | '\r'? '\n'
@@ -282,7 +286,7 @@ and ocaml_token e = parse
 	  ENDEF
 	)
 	else
-	  TEXT (lexeme lexbuf)
+	  TEXT (true, lexeme lexbuf)
       }
 
   | "(*"
@@ -294,13 +298,13 @@ and ocaml_token e = parse
       { clear e;
 	add e "\"";
 	string e lexbuf;
-	TEXT (get e) }
+	TEXT (false, get e) }
 
   | "<" (":" lident)? ("@" lident)? "<"
       { clear e;
 	add e (lexeme lexbuf);
 	quotation e lexbuf;
-	TEXT (get e) }
+	TEXT (false, get e) }
 
 
   | '-'? ( digit (digit | '_')*
@@ -312,7 +316,7 @@ and ocaml_token e = parse
       (['e' 'E'] ['+' '-']? digit (digit | '_')* )? 
 
   | _
-      { TEXT (lexeme lexbuf) }
+      { TEXT (false, lexeme lexbuf) }
 
   | eof 
       { EOF }
@@ -329,36 +333,18 @@ and comment e depth = parse
 	if depth > 0 then
 	  comment e depth lexbuf
 	else
-	  TEXT (get e)
+	  TEXT (false, get e)
       }
   | '"'
       { add_char e '"';
 	string e lexbuf;
 	comment e depth lexbuf }
       
-  | '\\' '\r'? '\n'
-      {
-	if e.in_directive then (
-	  new_line e lexbuf;
-	  comment e depth lexbuf
-	)
-	else (
-	  add e (lexeme lexbuf);
-	  new_line e lexbuf;
-	  comment e depth lexbuf
-	)
-      }
-
   | '\r'? '\n'
       { 
-	if e.in_directive then
-	  lexer_error lexbuf 
-	    "Unterminated comment or missing \\ before new line"
-	else (
-	  add e (lexeme lexbuf);
-	  new_line e lexbuf;
-	  comment e depth lexbuf
-	)
+	new_line e lexbuf;
+	add e (lexeme lexbuf);
+	comment e depth lexbuf
       }
       
   | [^'(' '*' '"' '\r' '\n']+
@@ -380,15 +366,9 @@ and string e = parse
       
   | '\\' '\r'? '\n'
       {
-	if e.in_directive then (
-	  new_line e lexbuf;
-	  string e lexbuf
-	)
-	else (
-	  add e (lexeme lexbuf);
-	  new_line e lexbuf;
-	  string e lexbuf
-	)
+	add e (lexeme lexbuf);
+	new_line e lexbuf;
+	string e lexbuf
       }
       
   | '\r'? '\n'
@@ -402,8 +382,8 @@ and string e = parse
 	)
       }
       
-  | [^ '"' '\\' '\r' '\n']+
-      { add e (lexeme lexbuf);
+  | _ as c
+      { add_char e c;
 	string e lexbuf }
       
   | eof
@@ -523,10 +503,6 @@ and test_token e = parse
 	    (sprintf "Integer constant %s is out the valid range for int64" s)
       }
 
-  | uident
-  | lident
-      { IDENT (Lexing.lexeme lexbuf) }
-
   | "+"       { PLUS }
   | "-"       { MINUS }
   | "*"       { STAR }
@@ -540,6 +516,10 @@ and test_token e = parse
   | "lxor"    { LXOR }
   | "lnot"    { LNOT }
 
+  | uident
+  | lident
+      { IDENT (Lexing.lexeme lexbuf) }
+
   | blank+                   { test_token e lexbuf }
   | '\\' '\r'? '\n'          { new_line e lexbuf;
 			       test_token e lexbuf }
@@ -547,6 +527,7 @@ and test_token e = parse
   | eof        { e.lexer <- `Ocaml;
 		 assert e.in_directive;
 		 e.in_directive <- false;
+		 e.line_start <- true;
 		 ENDTEST }
   | _          { error (loc lexbuf)
 		   (sprintf "Invalid token %s" (Lexing.lexeme lexbuf)) }
