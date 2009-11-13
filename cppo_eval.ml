@@ -7,12 +7,19 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
-let line_directive buf pos =
-  bprintf buf "\n# %i %S\n"
-    pos.Lexing.pos_lnum
-    pos.Lexing.pos_fname;
+let line_directive buf prev_file pos =
+  let file = pos.Lexing.pos_fname in
+  (match prev_file with
+       Some s when s = file ->
+	 bprintf buf "\n# %i\n"
+	   pos.Lexing.pos_lnum
+     | _ ->
+	 bprintf buf "\n# %i %S\n"
+	   pos.Lexing.pos_lnum
+	   pos.Lexing.pos_fname
+  );
   bprintf buf "%s" (String.make (pos.Lexing.pos_cnum - pos.Lexing.pos_bol) ' ')
-
+    
 let rec add_sep sep last = function
     [] -> [ last ]
   | [x] -> [ x; last ]
@@ -59,6 +66,7 @@ let int_of_string_with_space s =
 
 let remove_space l =
   List.filter (function `Text (_, (true, _)) -> false | _ -> true) l
+
 
 let rec eval_int env (x : arith_expr) : int64 =
   match x with
@@ -165,8 +173,15 @@ type globals = {
   buf : Buffer.t;
     (* buffer where the output is written *)
 
-  included : S.t
+  included : S.t;
     (* set of already-included files *)
+
+  require_location : bool ref;
+    (* whether a line directive should be printed before outputting the next
+       token *)
+
+  last_file_loc : string option ref;
+    (* used to test whether a line directive should include the file name *)
 }
 
 let parse file ic =
@@ -180,6 +195,15 @@ let parse file ic =
 let plural n =
   if abs n <= 1 then ""
   else "s"
+
+
+let maybe_print_location g pos =
+  let prev_file = !(g.last_file_loc) in
+  let file = pos.Lexing.pos_fname in
+  if !(g.require_location) then (
+    line_directive g.buf prev_file pos;
+    g.last_file_loc := Some file
+  )
 
 let rec include_file g file env =
   if S.mem file g.included then
@@ -196,6 +220,7 @@ and expand_list ?(top = false) g env l =
 and expand_node ?(top = false) g env0 x =
   match x with
       `Ident (loc, name, opt_args) ->
+
 	let def =
 	  try Some (M.find name env0)
 	  with Not_found -> None
@@ -205,6 +230,13 @@ and expand_node ?(top = false) g env0 x =
 	    { g with call_loc = loc }
 	  else g
 	in
+
+	if def = None then (
+	  maybe_print_location g (fst loc);
+	  g.require_location := false
+	)
+	else
+	  g.require_location := true;
 
 	(match def, opt_args with
 	     None, None -> expand_node g env0 (`Text (loc, (false, name)))
@@ -257,21 +289,25 @@ and expand_node ?(top = false) g env0 x =
 	)
 
     | `Def (loc, name, body)-> 
+	g.require_location := true;
 	if M.mem name env0 then
 	  error loc (sprintf "%S is already defined" name)
 	else
 	  M.add name (`Def (loc, name, body, env0)) env0
 
     | `Defun (loc, name, arg_names, body) ->
+	g.require_location := true;
 	if M.mem name env0 then
 	  error loc (sprintf "%S is already defined" name)
 	else	
 	  M.add name (`Defun (loc, name, arg_names, body, env0)) env0
 
     | `Undef (loc, name) ->
+	g.require_location := true;
 	M.remove name env0
 
     | `Include (loc, file) ->
+	g.require_location := true;
 	include_file g file env0
 
     | `Cond (loc, test, if_true, if_false) ->
@@ -279,6 +315,7 @@ and expand_node ?(top = false) g env0 x =
 	  if eval_bool env0 test then if_true
 	  else if_false
 	in
+	g.require_location := true;
 	expand_list g env0 l
 
     | `Error (loc, msg) ->
@@ -289,6 +326,10 @@ and expand_node ?(top = false) g env0 x =
 	env0
 
     | `Text (loc, (is_space, s)) ->
+	if not is_space then (
+	  maybe_print_location g (fst loc);
+	  g.require_location := false
+	);
 	Buffer.add_string g.buf s;
 	env0
 
@@ -296,18 +337,23 @@ and expand_node ?(top = false) g env0 x =
 	expand_list g env0 l
 
     | `Line (opt_file, n) ->
+	g.require_location := true;
 	(match opt_file with
 	     None -> bprintf g.buf "\n# %i\n" n
 	   | Some file -> bprintf g.buf "\n# %i %S\n" n file
 	);
 	env0
 
-    | `Current_line _ ->
+    | `Current_line loc ->
+	maybe_print_location g (fst loc);
+	g.require_location := true;
 	let pos, _ = g.call_loc in
 	bprintf g.buf " %i " pos.Lexing.pos_lnum;
 	env0
 
-    | `Current_file _ ->
+    | `Current_file loc ->
+	maybe_print_location g (fst loc);
+	g.require_location := true;
 	let pos, _ = g.call_loc in
 	bprintf g.buf " %S " pos.Lexing.pos_fname;
 	env0
@@ -323,7 +369,9 @@ let include_channels buf env l =
       let g = {
 	call_loc = dummy_loc;
 	buf = buf;
-	included = S.empty
+	included = S.empty;
+	require_location = ref true;
+	last_file_loc = ref None
       }
       in
       expand_list ~top:true { g with included = S.add file g.included } env l

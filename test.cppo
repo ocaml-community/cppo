@@ -1,3 +1,8 @@
+#include "incl.cppo"
+# 123456
+#789 "test"
+#include "incl.cppo"
+
 #define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
 
 #define pi 3.14

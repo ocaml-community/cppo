@@ -211,6 +211,7 @@ and directive e = parse
 
   | blank* (['0'-'9']+ as lnum) dblank0 '\r'? '\n'
       { e.in_directive <- false;
+	new_line e lexbuf;
 	LINE (None, int_of_string lnum) }
 
   | blank* (['0'-'9']+ as lnum) dblank0 '"'
@@ -219,7 +220,12 @@ and directive e = parse
 	blank_until_eol e lexbuf;
 	LINE (Some (get e), int_of_string lnum) }
 
-  | blank* ['a'-'z']*
+  | blank*
+      { e.in_directive <- false;
+	add e (lexeme lexbuf);
+	TEXT (true, get e) }
+
+  | blank* ['a'-'z']+
       { e.in_directive <- false;
 	add e (lexeme lexbuf);
 	TEXT (false, get e) }
@@ -318,6 +324,9 @@ and ocaml_token e = parse
 
   | '-'? digit (digit | '_')* ('.' (digit | '_')* )? 
       (['e' 'E'] ['+' '-']? digit (digit | '_')* )? 
+
+  | blank+
+      { TEXT (true, lexeme lexbuf) }
 
   | _
       { TEXT (false, lexeme lexbuf) }
