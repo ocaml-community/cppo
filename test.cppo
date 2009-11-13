@@ -44,10 +44,10 @@ failure
 test_multiline
 
 #define test_args(x,y) x y
-test_args(a,b)
+test_args("a","b")
 
 #define test_argc(x) x y
-test_argc(a,b) (* incorrect error message *)
+test_argc(aa\,bb)
 
 #define test_esc(x) x
 test_esc(\,\)\()

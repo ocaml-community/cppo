@@ -177,6 +177,10 @@ let parse file ic =
   with Parsing.Parse_error ->
     error (Cppo_lexer.loc lexbuf) "syntax error"
 
+let plural n =
+  if abs n <= 1 then ""
+  else "s"
+
 let rec include_file g file env =
   if S.mem file g.included then
     failwith (sprintf "Cyclic inclusion of file %S" file)
@@ -227,7 +231,7 @@ and expand_node ?(top = false) g env0 x =
 	       ignore (expand_list g env l);
 	       env0
 		 
-	   | Some (`Defun (loc, _, arg_names, l, env)), Some args ->
+	   | Some (`Defun (_, _, arg_names, l, env)), Some args ->
 	       let argc = List.length arg_names in
 	       let n = List.length args in
 	       let args =
@@ -238,9 +242,9 @@ and expand_node ?(top = false) g env0 x =
 	       in
 	       if argc <> n then
 		 error loc
-		   (sprintf "%S expects %i arguments but is applied to \
-                               %i arguments."
-		      name argc n)
+		   (sprintf "%S expects %i argument%s but is applied to \
+                               %i argument%s."
+		      name argc (plural argc) n (plural n))
 	       else
 		 let app_env =
 		   List.fold_left2 (

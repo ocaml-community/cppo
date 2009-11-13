@@ -62,7 +62,8 @@ main:
 ;
 
 full_node:
-  CL_PAREN  { `Text (rhs_loc 1, (false, ")")) }
+  CL_PAREN   { `Text (rhs_loc 1, (false, ")")) }
+| COMMA      { `Text (rhs_loc 1, (false, ",")) }
 | node       { $1 }
 ;
 

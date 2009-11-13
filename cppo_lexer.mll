@@ -247,9 +247,13 @@ and ocaml_token e = parse
       { FUNIDENT s }
 
   | ")"       { CL_PAREN }
+  | ","       { COMMA }
+  | "\\)"     { TEXT (false, ")") }
+  | "\\,"     { TEXT (false, ",") }
+  | "\\("     { TEXT (false, "(") (* not required *) }
 
   | '`'
-  | "!=" | "#" | "&" | "&&" | "(" |  "*" | "+" | "," | "-"
+  | "!=" | "#" | "&" | "&&" | "(" |  "*" | "+" | "-"
   | "-." | "->" | "." | ".. :" | "::" | ":=" | ":>" | ";" | ";;" | "<"
   | "<-" | "=" | ">" | ">]" | ">}" | "?" | "??" | "[" | "[<" | "[>" | "[|"
   | "]" | "_" | "`" | "{" | "{<" | "|" | "|]" | "}" | "~"
@@ -524,10 +528,10 @@ and test_token e = parse
   | '\\' '\r'? '\n'          { new_line e lexbuf;
 			       test_token e lexbuf }
   | '\r'? '\n' 
-  | eof        { e.lexer <- `Ocaml;
-		 assert e.in_directive;
+  | eof        { assert e.in_directive;
 		 e.in_directive <- false;
-		 e.line_start <- true;
+		 new_line e lexbuf;
+		 e.lexer <- `Ocaml;
 		 ENDTEST }
   | _          { error (loc lexbuf)
 		   (sprintf "Invalid token %s" (Lexing.lexeme lexbuf)) }
