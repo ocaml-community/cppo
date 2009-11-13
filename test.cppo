@@ -1,3 +1,5 @@
+(* comment *)
+
 #include "incl.cppo"
 # 123456
 #789 "test"
