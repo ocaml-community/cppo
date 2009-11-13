@@ -10,22 +10,36 @@ export PREFIX
 
 default: opt
 
-ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
+# ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
+ML = cppo_types.ml \
+     cppo_parser.mli cppo_parser.ml \
+     cppo_lexer.ml \
+     cppo_eval.ml cppo_main.ml
 
 all: $(ML)
-	ocamlc -o cppo -dtypes $(ML)
+	ocamlc -o cppo -dtypes str.cma $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo -dtypes $(ML)
+	ocamlopt -o cppo -dtypes str.cmxa $(ML)
 
-cppo.ml: cppo.mll cppo_types.ml
-	ocamllex cppo.mll
+cppo_lexer.ml: cppo_lexer.mll cppo_types.ml cppo_parser.ml
+	ocamllex cppo_lexer.mll
 
-cppo_parser.ml: cppo_parser.mly cppo_types.ml
+
+ifeq ($(DEV),true)
+cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml
+	menhir -v cppo_parser.mly
+else
+cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml
 	ocamlyacc cppo_parser.mly
+endif
 
 install:
 	install cppo $(PREFIX)/bin
 
 clean:
-	rm -f *.cm[iox] *.annot cppo_parser.mli cppo_parser.ml cppo.ml
+	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
+		cppo \
+		cppo_parser.mli cppo_parser.ml \
+		cppo_test_parser.mli cppo_test_parser.ml \
+		cppo_test_lexer.ml
