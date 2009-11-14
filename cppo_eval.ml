@@ -182,11 +182,19 @@ type globals = {
 
   last_file_loc : string option ref;
     (* used to test whether a line directive should include the file name *)
+
+  g_preserve_quotations : bool;
+    (* identify and preserve camlp4 quotations *)
+
+  incdirs : string list;
+    (* directories for finding included files *)
+
+  current_directory : string;
+    (* directory containing the current file *)
 }
 
-let parse file ic =
-  let lexbuf = Lexing.from_channel ic in
-  let lexer_env = Cppo_lexer.init file lexbuf in
+let parse ~preserve_quotations file lexbuf =
+  let lexer_env = Cppo_lexer.init ~preserve_quotations file lexbuf in
   try
     Cppo_parser.main (Cppo_lexer.line lexer_env) lexbuf
   with Parsing.Parse_error ->
@@ -205,14 +213,40 @@ let maybe_print_location g pos =
     g.last_file_loc := Some file
   )
 
-let rec include_file g file env =
+let rec include_file g loc rel_file env =
+  let file =
+    if not (Filename.is_relative rel_file) then
+      if Sys.file_exists rel_file then
+	rel_file
+      else
+	error loc (sprintf "Included file %S does not exist" rel_file)
+    else
+      try
+	let dir = 
+	  List.find (
+	    fun dir ->
+	      let file = Filename.concat dir rel_file in
+	      Sys.file_exists file
+	  ) (g.current_directory :: g.incdirs)
+	in
+	if dir = Filename.current_dir_name then
+	  rel_file
+	else
+	  Filename.concat dir rel_file
+      with Not_found -> 
+	error loc (sprintf "Cannot find included file %S" rel_file)
+  in
   if S.mem file g.included then
     failwith (sprintf "Cyclic inclusion of file %S" file)
   else
     let ic = open_in_bin file in
-    let l = parse file ic in
+    let lexbuf = Lexing.from_channel ic in
+    let l = parse ~preserve_quotations:g.g_preserve_quotations file lexbuf in
     close_in ic;
-    expand_list { g with included = S.add file g.included } env l
+    expand_list { g with
+		    included = S.add file g.included;
+		    current_directory = Filename.dirname file
+		} env l
 
 and expand_list ?(top = false) g env l =
   List.fold_left (expand_node ~top g) env l
@@ -308,7 +342,9 @@ and expand_node ?(top = false) g env0 x =
 
     | `Include (loc, file) ->
 	g.require_location := true;
-	include_file g file env0
+	let env = include_file g loc file env0 in
+	g.require_location := true;
+	env
 
     | `Cond (loc, test, if_true, if_false) ->
 	let l =
@@ -336,12 +372,17 @@ and expand_node ?(top = false) g env0 x =
     | `Seq l ->
 	expand_list g env0 l
 
-    | `Line (opt_file, n) ->
-	g.require_location := true;
+    | `Line (loc, (opt_file, n)) ->
+	(* printing a line directive is not strictly needed *)
 	(match opt_file with
-	     None -> bprintf g.buf "\n# %i\n" n
-	   | Some file -> bprintf g.buf "\n# %i %S\n" n file
+	     None ->
+	       maybe_print_location g (fst loc);
+	       bprintf g.buf "\n# %i\n" n
+	   | Some file ->
+	       bprintf g.buf "\n# %i %S\n" n file
 	);
+	(* printing the location next time is needed because it just changed *)
+	g.require_location := true;
 	env0
 
     | `Current_line loc ->
@@ -361,17 +402,20 @@ and expand_node ?(top = false) g env0 x =
 	  
 
 
-let include_channels buf env l =
+let include_inputs ~preserve_quotations ~incdirs buf env l =
   List.fold_left (
-    fun env (file, open_, close) ->
-      let l = parse file (open_ ()) in
+    fun env (dir, file, open_, close) ->
+      let l = parse ~preserve_quotations file (open_ ()) in
       close ();
       let g = {
 	call_loc = dummy_loc;
 	buf = buf;
 	included = S.empty;
 	require_location = ref true;
-	last_file_loc = ref None
+	last_file_loc = ref None;
+	g_preserve_quotations = preserve_quotations;
+	incdirs = incdirs;
+	current_directory = dir;
       }
       in
       expand_list ~top:true { g with included = S.add file g.included } env l

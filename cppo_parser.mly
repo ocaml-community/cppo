@@ -18,6 +18,9 @@
 
   let syntax_error s num =
     error (rhs_loc num) s
+
+  let syntax_error2 s num1 num2 =
+    error (rhs_loc2 num1 num2) s
 %}
 
 /* Directives */
@@ -108,6 +111,9 @@ node:
 		  let body = $4 in
 		  `Defun (rhs_loc2 1 4, name, args, body) }
 
+| DEFUN CL_PAREN
+                { syntax_error2 "At least one argument is required" 1 2 }
+
 | UNDEF
                 { `Undef (rhs_loc 1, $1) }
 | WARNING
@@ -164,7 +170,7 @@ node:
 | IFDEF full_node_list0 ELSE full_node_list0 error
                 { syntax_error "missing #endif" 1 }
 
-| LINE          { `Line $1 }
+| LINE          { `Line (rhs_loc 1, $1) }
 ;
 
 

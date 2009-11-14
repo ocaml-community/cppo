@@ -75,6 +75,7 @@ let read_hex2 c1 c2 =
   Char.chr (read_hexdigit c1 * 16 + read_hexdigit c2)
 
 type env = {
+  preserve_quotations : bool;
   mutable lexer : [ `Ocaml | `Test ];
   mutable line_start : bool;
   mutable in_directive : bool;
@@ -263,6 +264,7 @@ and ocaml_token e = parse
   | "-." | "->" | "." | ".. :" | "::" | ":=" | ":>" | ";" | ";;" | "<"
   | "<-" | "=" | ">" | ">]" | ">}" | "?" | "??" | "[" | "[<" | "[>" | "[|"
   | "]" | "_" | "`" | "{" | "{<" | "|" | "|]" | "}" | "~"
+  | ">>"
   | prefix_symbol 
   | infix_symbol
   | "'" ([^'\'''\\'] 
@@ -311,10 +313,16 @@ and ocaml_token e = parse
 	TEXT (false, get e) }
 
   | "<" (":" lident)? ("@" lident)? "<"
-      { clear e;
-	add e (lexeme lexbuf);
-	quotation e lexbuf;
-	TEXT (false, get e) }
+      { if e.preserve_quotations then (
+	  clear e;
+	  add e (lexeme lexbuf);
+	  quotation e lexbuf;
+	  TEXT (false, get e)
+	)
+	else (
+	  TEXT (false, lexeme lexbuf)
+	)
+      }
 
 
   | '-'? ( digit (digit | '_')*
@@ -547,9 +555,10 @@ and test_token e = parse
 
 
 {
-  let init file lexbuf =
+  let init ~preserve_quotations file lexbuf =
     new_file lexbuf file;
     {
+      preserve_quotations = preserve_quotations;
       lexer = `Ocaml;
       line_start = true;
       in_directive = false;

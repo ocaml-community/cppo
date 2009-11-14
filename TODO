@@ -1,3 +1,6 @@
 - make quotation support optional
 - fix invalid locations automatically deduced by ocamlyacc
   (comments and strings)
+- add command-line options: -D, -U, -I
+- add support for search paths and -I option (but no edgy brackets)
+- add -o option
