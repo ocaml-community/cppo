@@ -6,6 +6,7 @@ let () =
   let files = ref [] in
   let header = ref [] in
   let incdirs = ref [] in
+  let out_file = ref None in
   let preserve_quotations = ref false in
   let options = [
     "-D", Arg.String (fun s -> header := ("#define " ^ s ^ "\n") :: !header),
@@ -20,6 +21,10 @@ let () =
     "DIR
           Add directory DIR to the search path for files included using edgy
           brackets";
+
+    "-o", Arg.String (fun s -> out_file := Some s),
+    "FILE
+          Output file";
 
     "-q", Arg.Set preserve_quotations,
     "
@@ -73,5 +78,11 @@ Options:" Sys.argv.(0) in
       eprintf "%s\n%!" msg;
       exit 1
   in
-  print_string (Buffer.contents buf);
-  flush stdout
+  match !out_file with
+      None ->
+	print_string (Buffer.contents buf);
+	flush stdout
+    | Some file ->
+	let oc = open_out_bin file in
+	output_string oc (Buffer.contents buf);
+	close_out oc
