@@ -19,8 +19,7 @@ let () =
 
     "-I", Arg.String (fun s -> incdirs := s :: !incdirs),
     "DIR
-          Add directory DIR to the search path for files included using edgy
-          brackets";
+          Add directory DIR to the search path";
 
     "-o", Arg.String (fun s -> out_file := Some s),
     "FILE

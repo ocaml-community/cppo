@@ -16,18 +16,18 @@
         (string_of_loc (rhs_loc opening_num)) opening_name in
     failwith msg
 
-  let syntax_error s num =
+  let error1 s num =
     error (rhs_loc num) s
 
-  let syntax_error2 s num1 num2 =
+  let error2 s num1 num2 =
     error (rhs_loc2 num1 num2) s
 %}
 
 /* Directives */
-%token < string > DEF DEFUN UNDEF INCLUDE WARNING ERROR
-%token < (string option * int) > LINE
-%token < Cppo_types.bool_expr > IFDEF
-%token ENDEF IF ELIF ELSE ENDIF ENDTEST
+%token < Cppo_types.loc * string > DEF DEFUN UNDEF INCLUDE WARNING ERROR
+%token < Cppo_types.loc * string option * int > LINE
+%token < Cppo_types.loc * Cppo_types.bool_expr > IFDEF
+%token < Cppo_types.loc > ENDEF IF ELIF ELSE ENDIF ENDTEST
 
 
 /* Boolean expressions in #if/#elif directives */
@@ -37,9 +37,9 @@
 
 
 /* Regular program and shared terminals */
-%token CL_PAREN COMMA CURRENT_LINE CURRENT_FILE
-%token < string > IDENT FUNIDENT
-%token < (bool * string) > TEXT /* bool is true for space tokens */
+%token < Cppo_types.loc > CL_PAREN COMMA CURRENT_LINE CURRENT_FILE
+%token < Cppo_types.loc * string > IDENT FUNIDENT
+%token < Cppo_types.loc * bool * string > TEXT /* bool means "is space" */
 %token EOF
 
 
@@ -65,8 +65,8 @@ main:
 ;
 
 full_node:
-  CL_PAREN   { `Text (rhs_loc 1, (false, ")")) }
-| COMMA      { `Text (rhs_loc 1, (false, ",")) }
+  CL_PAREN   { `Text ($1, false, ")") }
+| COMMA      { `Text ($1, false, ",") }
 | node       { $1 }
 ;
 
@@ -83,9 +83,10 @@ full_node_list0:
 /* TODO: make lone COMMAs valid only in "main" rule */
 /* TODO: same for parentheses */
 node:
-  TEXT          { `Text (rhs_loc 1, $1) }
+  TEXT          { `Text $1 }
 
-| IDENT         { `Ident (rhs_loc 1, $1, None) }
+| IDENT         { let loc, name = $1 in
+		  `Ident (loc, name, None) }
 
 | FUNIDENT args1 CL_PAREN
                 {
@@ -93,40 +94,47 @@ node:
                    possibly empty.  We cannot distinguish syntactically between
 		   zero argument and one empty argument.
                 *)
-		  `Ident (rhs_loc2 1 3, $1, Some $2) }
+		  let (pos1, _), name = $1 in
+		  let _, pos2 = $3 in
+		  `Ident ((pos1, pos2), name, Some $2) }
 | FUNIDENT error
-                { syntax_error "Invalid macro application" 1 }
+                { error (fst $1) "Invalid macro application" }
 
-| CURRENT_LINE  { `Current_line (rhs_loc 1) }
-| CURRENT_FILE  { `Current_file (rhs_loc 1) }
+| CURRENT_LINE  { `Current_line $1 }
+| CURRENT_FILE  { `Current_file $1 }
 
 | DEF full_node_list0 ENDEF
-                { let name = $1 in
+                { let (pos1, _), name = $1 in
 		  let body = $2 in
-		  `Def (rhs_loc2 1 3, name, body) }
+		  let _, pos2 = $3 in
+		  `Def ((pos1, pos2), name, body) }
 
 | DEFUN def_args1 CL_PAREN full_node_list0 ENDEF
-                { let name = $1 in
+                { let (pos1, _), name = $1 in
 		  let args = $2 in
 		  let body = $4 in
-		  `Defun (rhs_loc2 1 4, name, args, body) }
+		  let _, pos2 = $5 in
+		  `Defun ((pos1, pos2), name, args, body) }
 
 | DEFUN CL_PAREN
-                { syntax_error2 "At least one argument is required" 1 2 }
+                { error (fst (fst $1), snd $2)
+		    "At least one argument is required" }
 
 | UNDEF
-                { `Undef (rhs_loc 1, $1) }
+                { `Undef $1 }
 | WARNING
-                { `Warning (rhs_loc 1, $1) }
+                { `Warning $1 }
 | ERROR
-                { `Error (rhs_loc 1, $1) }
+                { `Error $1 }
 
 | INCLUDE
-                { `Include (rhs_loc 1, $1) }
+                { `Include $1 }
 
 
 | IF test full_node_list0 elif_list ENDIF
-                { let loc = rhs_loc2 1 5 in
+                { let pos1, _ = $1 in
+		  let _, pos2 = $5 in
+		  let loc = (pos1, pos2) in
 		  let test = $2 in
 		  let if_true = $3 in
 		  let if_false =
@@ -140,11 +148,12 @@ node:
 
 | IF test full_node_list0 elif_list error
                 { (* BUG? ocamlyacc fails to reduce that rule but not menhir *)
-		  syntax_error "missing #endif" 1 }
+		  error $1 "missing #endif" }
 
 | IFDEF full_node_list0 elif_list ENDIF
-                { let loc = rhs_loc2 1 4 in
-		  let test = $1 in
+                { let (pos1, _), test = $1 in
+		  let _, pos2 = $4 in
+		  let loc = (pos1, pos2) in
 		  let if_true = $2 in
 		  let if_false =
 		    List.fold_right (
@@ -156,27 +165,29 @@ node:
 		}
 
 | IFDEF full_node_list0 elif_list error
-                { syntax_error "missing #endif" 1 }
+                { error (fst $1) "missing #endif" }
 
 | IF test full_node_list0 ELSE full_node_list0 ENDIF
-                { `Cond (rhs_loc2 1 5, $2, $3, $5) }
+                { `Cond ((fst $1, snd $6), $2, $3, $5) }
 
 | IF test full_node_list0 ELSE full_node_list0 error
-                { syntax_error "missing #endif" 1 }
+                { error $1 "missing #endif" }
 
 | IFDEF full_node_list0 ELSE full_node_list0 ENDIF
-                { `Cond (rhs_loc2 1 4, $1, $2, $4) }
+                { `Cond ((fst (fst $1), snd $5), (snd $1), $2, $4) }
 
 | IFDEF full_node_list0 ELSE full_node_list0 error
-                { syntax_error "missing #endif" 1 }
+                { error (fst $1) "missing #endif" }
 
-| LINE          { `Line (rhs_loc 1, $1) }
+| LINE          { `Line $1 }
 ;
 
 
 elif_list:
   ELIF test full_node_list0 elif_list
-                   { (rhs_loc2 1 4, $2, $3) :: $4 }
+                   { let pos1, _ = $1 in
+		     let pos2 = Parsing.rhs_end_pos 4 in
+		     ((pos1, pos2), $2, $3) :: $4 }
 |                  { [] }
 ;
 
@@ -188,8 +199,8 @@ args1:
 
 def_args1:
   IDENT COMMA def_args1
-                   { $1 :: $3 }
-| IDENT            { [ $1 ] }
+                   { (snd $1) :: $3 }
+| IDENT            { [ snd $1 ] }
 ;
 
 test:
@@ -200,7 +211,7 @@ test:
 bexpr:
   | TRUE                            { `True }
   | FALSE                           { `False }
-  | DEFINED OP_PAREN IDENT CL_PAREN { `Defined $3 }
+  | DEFINED OP_PAREN IDENT CL_PAREN { `Defined (snd $3) }
   | OP_PAREN bexpr CL_PAREN         { $2 }
   | NOT bexpr                       { `Not $2 }
   | bexpr AND bexpr                 { `And ($1, $3) }
@@ -216,7 +227,7 @@ bexpr:
 /* Arithmetic expressions within boolean expressions */
 aexpr:
   | INT                      { `Int $1 }
-  | IDENT                    { `Ident (rhs_loc 1, $1) }
+  | IDENT                    { `Ident $1 }
   | OP_PAREN aexpr CL_PAREN  { $2 }
   | aexpr PLUS aexpr         { `Add ($1, $3) }
   | aexpr MINUS aexpr        { `Sub ($1, $3) }

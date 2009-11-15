@@ -53,9 +53,9 @@ and node =
     | `Cond of (loc * bool_expr * node list * node list)
     | `Error of (loc * string)
     | `Warning of (loc * string)
-    | `Text of (loc * (bool * string)) (* bool is true for space tokens *)
+    | `Text of (loc * bool * string) (* bool is true for space tokens *)
     | `Seq of node list
-    | `Line of (loc * (string option * int))
+    | `Line of (loc * string option * int)
     | `Current_line of loc
     | `Current_file of loc ]
 

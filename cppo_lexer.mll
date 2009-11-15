@@ -7,7 +7,9 @@ open Lexing
 open Cppo_types
 open Cppo_parser
 
-let loc lexbuf = (lexbuf.lex_start_p, lexbuf.lex_curr_p)
+let pos1 lexbuf = lexbuf.lex_start_p
+let pos2 lexbuf = lexbuf.lex_curr_p
+let loc lexbuf = (pos1 lexbuf, pos2 lexbuf)
 
 let lexer_error lexbuf descr =
   error (loc lexbuf) descr
@@ -79,12 +81,14 @@ type env = {
   mutable lexer : [ `Ocaml | `Test ];
   mutable line_start : bool;
   mutable in_directive : bool;
-  buf : Buffer.t
+  buf : Buffer.t;
+  mutable token_start : Lexing.position;
+  lexbuf : Lexing.lexbuf;
 }
 
-let new_line env lb =
+let new_line env =
   env.line_start <- true;
-  count_new_lines lb 1
+  count_new_lines env.lexbuf 1
 
 let clear env = Buffer.clear env.buf
 
@@ -97,6 +101,8 @@ let add_char env c =
   Buffer.add_char env.buf c
 
 let get env = Buffer.contents env.buf
+
+let long_loc e = (e.token_start, pos2 e.lexbuf)
 }
 
 let upper = ['A'-'Z' '\192'-'\214' '\216'-'\222']
@@ -147,13 +153,14 @@ and line e = parse
 		  e.in_directive <- true;
 		  clear e;
 		  add e s;
+		  e.token_start <- pos1 lexbuf;
 		  directive e lexbuf
 		)
 		else (
 		  e.in_directive <- false;
 		  e.line_start <- false;
 		  clear e;
-		  TEXT (false, s)
+		  TEXT (loc lexbuf, false, s)
 		)
 	}
 
@@ -162,102 +169,103 @@ and line e = parse
 
 and directive e = parse
     blank* "define" dblank1 (ident as id) "(" 
-      { DEFUN id }
+      { DEFUN (long_loc e, id) }
 
   | blank* "define" dblank1 (ident as id)
-      { assert e.in_directive; DEF id }
+      { assert e.in_directive;
+	DEF (long_loc e, id) }
 
   | blank* "undef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
-	UNDEF id }
+	UNDEF (long_loc e, id) }
 
   | blank* "if" dblank1    { e.lexer <- `Test;
-			     IF }
+			     IF (long_loc e) }
   | blank* "elif" dblank1  { e.lexer <- `Test;
-			     ELIF }
+			     ELIF (long_loc e) }
 
   | blank* "ifdef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
-	IFDEF (`Defined id) }
+	IFDEF (long_loc e, `Defined id) }
 
   | blank* "ifndef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
-	IFDEF (`Not (`Defined id)) }
+	IFDEF (long_loc e, `Not (`Defined id)) }
 
   | blank* "else"
       { blank_until_eol e lexbuf;
-	ELSE }
+	ELSE (long_loc e) }
 
   | blank* "endif"
       { blank_until_eol e lexbuf;
-	ENDIF }
+	ENDIF (long_loc e) }
 
   | blank* "include" dblank0 '"'
       { clear e;
 	eval_string e lexbuf;
 	blank_until_eol e lexbuf;
-	INCLUDE (get e) }
+	INCLUDE (long_loc e, get e) }
   
   | blank* "error" dblank0 '"'
       { clear e;
 	eval_string e lexbuf;
 	blank_until_eol e lexbuf;
-	ERROR (get e) }
+	ERROR (long_loc e, get e) }
 
   | blank* "warning" dblank0 '"'
       { clear e;
 	eval_string e lexbuf;
 	blank_until_eol e lexbuf;
-	WARNING (get e) }
+	WARNING (long_loc e, get e) }
 
   | blank* (['0'-'9']+ as lnum) dblank0 '\r'? '\n'
       { e.in_directive <- false;
-	new_line e lexbuf;
-	LINE (None, int_of_string lnum) }
+	new_line e;
+	LINE (long_loc e, None, int_of_string lnum) }
 
   | blank* (['0'-'9']+ as lnum) dblank0 '"'
       { clear e;
 	eval_string e lexbuf;
 	blank_until_eol e lexbuf;
-	LINE (Some (get e), int_of_string lnum) }
+	LINE (long_loc e, Some (get e), int_of_string lnum) }
 
   | blank*
       { e.in_directive <- false;
 	add e (lexeme lexbuf);
-	TEXT (true, get e) }
+	TEXT (long_loc e, true, get e) }
 
   | blank* ['a'-'z']+
       { e.in_directive <- false;
 	add e (lexeme lexbuf);
-	TEXT (false, get e) }
+	TEXT (long_loc e, false, get e) }
 
 
 and blank_until_eol e = parse
     blank* eof
-  | blank* '\r'? '\n' { new_line e lexbuf;
+  | blank* '\r'? '\n' { new_line e;
 			e.in_directive <- false }
   | ""                { lexer_error lexbuf "Missing line terminator" }
 
 and ocaml_token e = parse
     "__LINE__"
-      { CURRENT_LINE }
+      { CURRENT_LINE (loc lexbuf) }
 
   | "__FILE__"
-      { CURRENT_FILE }
+      { CURRENT_FILE (loc lexbuf) }
 
   | uident
   | lident as s
-      { IDENT s }
+      { IDENT (loc lexbuf, s) }
 
   | uident
   | lident as s "("
-      { FUNIDENT s }
+      { FUNIDENT (loc lexbuf, s) }
 
-  | ")"       { CL_PAREN }
-  | ","       { COMMA }
-  | "\\)"     { TEXT (false, ")") }
-  | "\\,"     { TEXT (false, ",") }
-  | "\\("     { TEXT (false, "(") (* not required *) }
+  | ")"       { CL_PAREN (loc lexbuf) }
+  | ","       { COMMA (loc lexbuf) }
+  | "\\)"     { TEXT (loc lexbuf, false, ")") }
+  | "\\,"     { TEXT (loc lexbuf, false, ",") }
+  | "\\("     { TEXT (loc lexbuf, false, "(") (* feature not required *) }
 
   | '`'
   | "!=" | "#" | "&" | "&&" | "(" |  "*" | "+" | "-"
@@ -270,57 +278,60 @@ and ocaml_token e = parse
   | "'" ([^'\'''\\'] 
   | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
 
-      { TEXT (false, lexeme lexbuf) }
+      { TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | "'\n'" 
   | "'\r\n'" 
-      { new_line e lexbuf;
-	TEXT (false, lexeme lexbuf) }
+      { new_line e;
+	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | blank+
-      { TEXT (true, lexeme lexbuf) }
+      { TEXT (loc lexbuf, true, lexeme lexbuf) }
 
   | '\\' ('\r'? '\n' as nl)
 
       {
-	new_line e lexbuf;
+	new_line e;
 	if e.in_directive then
-	  TEXT (true, nl)
+	  TEXT (loc lexbuf, true, nl)
 	else
-	  TEXT (false, lexeme lexbuf)
+	  TEXT (loc lexbuf, false, lexeme lexbuf)
       }
 
   | '\r'? '\n'
       {
-	new_line e lexbuf;
+	new_line e;
 	if e.in_directive then (
 	  e.in_directive <- false;
-	  ENDEF
+	  ENDEF (loc lexbuf)
 	)
 	else
-	  TEXT (true, lexeme lexbuf)
+	  TEXT (loc lexbuf, true, lexeme lexbuf)
       }
 
   | "(*"
       { clear e;
 	add e "(*";
+	e.token_start <- pos1 lexbuf;
 	comment e 1 lexbuf }
 
   | '"'
       { clear e;
 	add e "\"";
+	e.token_start <- pos1 lexbuf;
 	string e lexbuf;
-	TEXT (false, get e) }
+	TEXT (long_loc e, false, get e) }
 
   | "<" (":" lident)? ("@" lident)? "<"
       { if e.preserve_quotations then (
 	  clear e;
 	  add e (lexeme lexbuf);
+	  e.token_start <- pos1 lexbuf;
 	  quotation e lexbuf;
-	  TEXT (false, get e)
+	  TEXT (long_loc e, false, get e)
 	)
 	else (
-	  TEXT (false, lexeme lexbuf)
+	  TEXT (loc lexbuf, false, lexeme lexbuf)
 	)
       }
 
@@ -334,10 +345,10 @@ and ocaml_token e = parse
       (['e' 'E'] ['+' '-']? digit (digit | '_')* )? 
 
   | blank+
-      { TEXT (true, lexeme lexbuf) }
+      { TEXT (loc lexbuf, true, lexeme lexbuf) }
 
   | _
-      { TEXT (false, lexeme lexbuf) }
+      { TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | eof 
       { EOF }
@@ -354,7 +365,7 @@ and comment e depth = parse
 	if depth > 0 then
 	  comment e depth lexbuf
 	else
-	  TEXT (false, get e)
+	  TEXT (long_loc e, false, get e)
       }
   | '"'
       { add_char e '"';
@@ -363,7 +374,7 @@ and comment e depth = parse
       
   | '\r'? '\n'
       { 
-	new_line e lexbuf;
+	new_line e;
 	add e (lexeme lexbuf);
 	comment e depth lexbuf
       }
@@ -388,7 +399,7 @@ and string e = parse
   | '\\' '\r'? '\n'
       {
 	add e (lexeme lexbuf);
-	new_line e lexbuf;
+	new_line e;
 	string e lexbuf
       }
       
@@ -398,7 +409,7 @@ and string e = parse
 	  lexer_error lexbuf "Unterminated string literal"
 	else (
 	  add e (lexeme lexbuf);
-	  new_line e lexbuf;
+	  new_line e;
 	  string e lexbuf
 	)
       }
@@ -470,12 +481,12 @@ and quotation e = parse
   | '\\' '\r'? '\n'
       {
 	if e.in_directive then (
-	  new_line e lexbuf;
+	  new_line e;
 	  quotation e lexbuf
 	)
 	else (
 	  add e (lexeme lexbuf);
-	  new_line e lexbuf;
+	  new_line e;
 	  quotation e lexbuf
 	)
       }
@@ -486,7 +497,7 @@ and quotation e = parse
 	  lexer_error lexbuf "Unterminated quotation"
 	else (
 	  add e (lexeme lexbuf);
-	  new_line e lexbuf;
+	  new_line e;
 	  quotation e lexbuf
 	)
       }
@@ -503,7 +514,7 @@ and test_token e = parse
   | "false"   { FALSE }
   | "defined" { DEFINED }
   | "("       { OP_PAREN }
-  | ")"       { CL_PAREN }
+  | ")"       { CL_PAREN (loc lexbuf) }
   | "&&"      { AND }
   | "||"      { OR }
   | "="       { EQ }
@@ -539,17 +550,17 @@ and test_token e = parse
 
   | uident
   | lident
-      { IDENT (Lexing.lexeme lexbuf) }
+      { IDENT (loc lexbuf, lexeme lexbuf) }
 
   | blank+                   { test_token e lexbuf }
-  | '\\' '\r'? '\n'          { new_line e lexbuf;
+  | '\\' '\r'? '\n'          { new_line e;
 			       test_token e lexbuf }
   | '\r'? '\n' 
   | eof        { assert e.in_directive;
 		 e.in_directive <- false;
-		 new_line e lexbuf;
+		 new_line e;
 		 e.lexer <- `Ocaml;
-		 ENDTEST }
+		 ENDTEST (loc lexbuf) }
   | _          { error (loc lexbuf)
 		   (sprintf "Invalid token %s" (Lexing.lexeme lexbuf)) }
 
@@ -562,6 +573,8 @@ and test_token e = parse
       lexer = `Ocaml;
       line_start = true;
       in_directive = false;
-      buf = Buffer.create 200
+      buf = Buffer.create 200;
+      token_start = Lexing.dummy_pos;
+      lexbuf = lexbuf;
     }
 }

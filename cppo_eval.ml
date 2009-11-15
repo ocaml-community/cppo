@@ -65,7 +65,7 @@ let int_of_string_with_space s =
   with _ -> None
 
 let remove_space l =
-  List.filter (function `Text (_, (true, _)) -> false | _ -> true) l
+  List.filter (function `Text (_, true, _) -> false | _ -> true) l
 
 
 let rec eval_int env (x : arith_expr) : int64 =
@@ -88,7 +88,7 @@ let rec eval_int env (x : arith_expr) : int64 =
 		 let text =
 		   List.map (
 		     function
-			 `Text (_, (is_space, s)) -> s
+			 `Text (_, is_space, s) -> s
 		       | _ ->
 			   error loc
 			     (sprintf
@@ -273,15 +273,15 @@ and expand_node ?(top = false) g env0 x =
 	  g.require_location := true;
 
 	(match def, opt_args with
-	     None, None -> expand_node g env0 (`Text (loc, (false, name)))
+	     None, None -> expand_node g env0 (`Text (loc, false, name))
 	   | None, Some args ->
 	       let with_sep = 
 		 add_sep
-		   [`Text (loc, (false, ","))]
-		   [`Text (loc, (false, ")"))]
+		   [`Text (loc, false, ",")]
+		   [`Text (loc, false, ")")]
 		   args in
 	       let l =
-		 `Text (loc, (false, name ^ "(")) :: List.flatten with_sep in
+		 `Text (loc, false, name ^ "(") :: List.flatten with_sep in
 	       expand_list g env0 l
 		 
 	   | Some (`Defun (_, _, arg_names, _, _)), None ->
@@ -361,7 +361,7 @@ and expand_node ?(top = false) g env0 x =
 	warning loc msg;
 	env0
 
-    | `Text (loc, (is_space, s)) ->
+    | `Text (loc, is_space, s) ->
 	if not is_space then (
 	  maybe_print_location g (fst loc);
 	  g.require_location := false
@@ -372,7 +372,7 @@ and expand_node ?(top = false) g env0 x =
     | `Seq l ->
 	expand_list g env0 l
 
-    | `Line (loc, (opt_file, n)) ->
+    | `Line (loc, opt_file, n) ->
 	(* printing a line directive is not strictly needed *)
 	(match opt_file with
 	     None ->
