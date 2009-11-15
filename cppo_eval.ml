@@ -7,6 +7,17 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
+let builtins = [
+  "__LINE__";
+  "__FILE__"
+]
+
+let is_reserved s =
+  List.mem s builtins
+
+let builtin_env =
+  List.fold_right (fun s -> M.add s `Special) builtins M.empty
+
 let line_directive buf prev_file pos =
   let file = pos.Lexing.pos_fname in
   (match prev_file with
@@ -78,6 +89,7 @@ let rec eval_int env (x : arith_expr) : int64 =
 		`Def (_, _, l, _) -> l
 	      | `Defun _ -> 
 		  error loc (sprintf "%S expects arguments" name)
+	      | `Special -> assert false
 	  with Not_found -> error loc (sprintf "Undefined identifier %S" name)
 	in
 	(try
@@ -320,6 +332,8 @@ and expand_node ?(top = false) g env0 x =
 		 in
 		 ignore (expand_list g app_env l);
 		 env0
+
+	   | Some `Special, _ -> assert false
 	)
 
     | `Def (loc, name, body)-> 
@@ -338,7 +352,11 @@ and expand_node ?(top = false) g env0 x =
 
     | `Undef (loc, name) ->
 	g.require_location := true;
-	M.remove name env0
+	if is_reserved name then
+	  error loc 
+	    (sprintf "%S is a built-in variable that cannot be undefined" name)
+	else
+	  M.remove name env0
 
     | `Include (loc, file) ->
 	g.require_location := true;

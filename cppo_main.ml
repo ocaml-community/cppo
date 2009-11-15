@@ -66,7 +66,7 @@ Options:" Sys.argv.(0) in
     preliminaries @ main
   in
 
-  let env = Cppo_eval.M.empty in
+  let env = Cppo_eval.builtin_env in
   let buf = Buffer.create 10_000 in
   let _env =
     try Cppo_eval.include_inputs

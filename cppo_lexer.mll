@@ -322,7 +322,8 @@ and ocaml_token e = parse
 	string e lexbuf;
 	TEXT (long_loc e, false, get e) }
 
-  | "<" (":" lident)? ("@" lident)? "<"
+  | "<:"
+  | "<<"
       { if e.preserve_quotations then (
 	  clear e;
 	  add e (lexeme lexbuf);

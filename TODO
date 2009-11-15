@@ -1,2 +1,3 @@
-- fix invalid locations automatically deduced by ocamlyacc
-  (comments and strings)
+- large-scale testing
+- documentation
+- packaging
