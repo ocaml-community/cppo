@@ -58,6 +58,3 @@ test_argc(aa\,bb)
 
 #define test_esc(x) x
 test_esc(\,\)\()
-
-#undef __LINE__
-#define __LINE__ 0
