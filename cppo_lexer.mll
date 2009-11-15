@@ -154,6 +154,7 @@ and line e = parse
 		  clear e;
 		  add e s;
 		  e.token_start <- pos1 lexbuf;
+		  e.line_start <- false;
 		  directive e lexbuf
 		)
 		else (
@@ -248,24 +249,28 @@ and blank_until_eol e = parse
 
 and ocaml_token e = parse
     "__LINE__"
-      { CURRENT_LINE (loc lexbuf) }
+      { e.line_start <- false;
+	CURRENT_LINE (loc lexbuf) }
 
   | "__FILE__"
-      { CURRENT_FILE (loc lexbuf) }
+      { e.line_start <- false;
+	CURRENT_FILE (loc lexbuf) }
 
   | uident
   | lident as s
-      { IDENT (loc lexbuf, s) }
+      { e.line_start <- false;
+	IDENT (loc lexbuf, s) }
 
   | uident
   | lident as s "("
-      { FUNIDENT (loc lexbuf, s) }
+      { e.line_start <- false;
+	FUNIDENT (loc lexbuf, s) }
 
-  | ")"       { CL_PAREN (loc lexbuf) }
-  | ","       { COMMA (loc lexbuf) }
-  | "\\)"     { TEXT (loc lexbuf, false, ")") }
-  | "\\,"     { TEXT (loc lexbuf, false, ",") }
-  | "\\("     { TEXT (loc lexbuf, false, "(") (* feature not required *) }
+  | ")"       { e.line_start <- false; CL_PAREN (loc lexbuf) }
+  | ","       { e.line_start <- false; COMMA (loc lexbuf) }
+  | "\\)"     { e.line_start <- false; TEXT (loc lexbuf, false, ")") }
+  | "\\,"     { e.line_start <- false; TEXT (loc lexbuf, false, ",") }
+  | "\\("     { e.line_start <- false; TEXT (loc lexbuf, false, "(") }
 
   | '`'
   | "!=" | "#" | "&" | "&&" | "(" |  "*" | "+" | "-"
@@ -278,7 +283,8 @@ and ocaml_token e = parse
   | "'" ([^'\'''\\'] 
   | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
 
-      { TEXT (loc lexbuf, false, lexeme lexbuf) }
+      { e.line_start <- false; 
+	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | "'\n'" 
   | "'\r\n'" 
@@ -320,6 +326,7 @@ and ocaml_token e = parse
 	add e "\"";
 	e.token_start <- pos1 lexbuf;
 	string e lexbuf;
+	e.line_start <- false;
 	TEXT (long_loc e, false, get e) }
 
   | "<:"
@@ -329,9 +336,11 @@ and ocaml_token e = parse
 	  add e (lexeme lexbuf);
 	  e.token_start <- pos1 lexbuf;
 	  quotation e lexbuf;
+	  e.line_start <- false;
 	  TEXT (long_loc e, false, get e)
 	)
 	else (
+	  e.line_start <- false;
 	  TEXT (loc lexbuf, false, lexeme lexbuf)
 	)
       }
@@ -344,12 +353,15 @@ and ocaml_token e = parse
 
   | '-'? digit (digit | '_')* ('.' (digit | '_')* )? 
       (['e' 'E'] ['+' '-']? digit (digit | '_')* )? 
+      { e.line_start <- false;
+	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | blank+
       { TEXT (loc lexbuf, true, lexeme lexbuf) }
 
   | _
-      { TEXT (loc lexbuf, false, lexeme lexbuf) }
+      { e.line_start <- false;
+	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | eof 
       { EOF }
@@ -365,8 +377,10 @@ and comment e depth = parse
 	add e "*)";
 	if depth > 0 then
 	  comment e depth lexbuf
-	else
+	else (
+	  e.line_start <- false;
 	  TEXT (long_loc e, false, get e)
+	)
       }
   | '"'
       { add_char e '"';

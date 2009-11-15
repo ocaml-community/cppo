@@ -58,3 +58,9 @@ test_argc(aa\,bb)
 
 #define test_esc(x) x
 test_esc(\,\)\()
+
+blah #define dammit shit
+blah #if true
+dammit
+x#endif
+

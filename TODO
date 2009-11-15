@@ -1,3 +1,4 @@
+- bug: #if directive starting in the middle of the line
 - large-scale testing
 - documentation
 - packaging
