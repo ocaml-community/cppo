@@ -13,15 +13,17 @@ let () =
   let options = [
     "-D", Arg.String (fun s -> header := ("#define " ^ s ^ "\n") :: !header),
     "DEF
-          Equivalent of interpreting #define DEF before processing the input";
+          Equivalent of interpreting '#define DEF' before processing the
+          input";
 
     "-U", Arg.String (fun s -> header := ("#undef " ^ s ^ "\n") :: !header),
     "IDENT
-          Equivalent of interpreting #undef IDENT before processing the input";
+          Equivalent of interpreting '#undef IDENT' before processing the
+          input";
 
     "-I", Arg.String (fun s -> incdirs := s :: !incdirs),
     "DIR
-          Add directory DIR to the search path";
+          Add directory DIR to the search path for included files";
 
     "-o", Arg.String (fun s -> out_file := Some s),
     "FILE

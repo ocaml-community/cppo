@@ -71,3 +71,9 @@ sticky2()
 #define empty1
 #define empty2 +empty1+ (* there should be some space between the pluses *)
 empty2
+
+(* (* nested comment with single single quote: ' *) "*)" *)
+
+#define arg
+obj
+  \# define arg
