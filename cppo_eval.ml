@@ -195,6 +195,13 @@ type globals = {
   last_file_loc : string option ref;
     (* used to test whether a line directive should include the file name *)
 
+  show_exact_locations : bool;
+    (* whether line directives should be printed even for expanded macro
+       bodies *)
+
+  enable_loc : bool ref;
+    (* whether line directives should be printed *)
+
   g_preserve_quotations : bool;
     (* identify and preserve camlp4 quotations *)
 
@@ -218,12 +225,13 @@ let plural n =
 
 
 let maybe_print_location g pos =
-  let prev_file = !(g.last_file_loc) in
-  let file = pos.Lexing.pos_fname in
-  if !(g.require_location) then (
-    line_directive g.buf prev_file pos;
-    g.last_file_loc := Some file
-  )
+  if !(g.enable_loc) then
+    let prev_file = !(g.last_file_loc) in
+    let file = pos.Lexing.pos_fname in
+    if !(g.require_location) then (
+      line_directive g.buf prev_file pos;
+      g.last_file_loc := Some file
+    )
 
 let rec include_file g loc rel_file env =
   let file =
@@ -277,64 +285,84 @@ and expand_node ?(top = false) g env0 x =
 	  else g
 	in
 
-	if def = None then (
-	  maybe_print_location g (fst loc);
+	let enable_loc0 = !(g.enable_loc) in
+
+	if def <> None then (
+	  g.require_location := true;
+
+	  if not g.show_exact_locations then (
+	    (* error reports will point more or less to the point
+	       where the code is included rather than the source location
+	       of the macro definition *)
+	    maybe_print_location g (fst loc);
+	    g.enable_loc := false
+	  )
+	);
+
+	let env =
+	  match def, opt_args with
+	      None, None ->
+		expand_node g env0 (`Text (loc, false, name))
+	    | None, Some args ->
+		let with_sep = 
+		  add_sep
+		    [`Text (loc, false, ",")]
+		    [`Text (loc, false, ")")]
+		    args in
+		let l =
+		  `Text (loc, false, name ^ "(") :: List.flatten with_sep in
+		expand_list g env0 l
+		  
+	    | Some (`Defun (_, _, arg_names, _, _)), None ->
+		error loc 
+		  (sprintf "%S expects %i arguments but is applied to none." 
+		     name (List.length arg_names))
+		  
+	    | Some (`Def _), Some l ->
+		error loc 
+		  (sprintf "%S expects no arguments" name)
+		  
+	    | Some (`Def (_, _, l, env)), None ->
+		ignore (expand_list g env l);
+		env0
+		  
+	    | Some (`Defun (_, _, arg_names, l, env)), Some args ->
+		let argc = List.length arg_names in
+		let n = List.length args in
+		let args =
+		  (* it's ok to pass an empty arg if one arg
+		     is expected *)
+		  if n = 0 && argc = 1 then [[]]
+		  else args
+		in
+		if argc <> n then
+		  error loc
+		    (sprintf "%S expects %i argument%s but is applied to \
+                              %i argument%s."
+		       name argc (plural argc) n (plural n))
+		else
+		  let app_env =
+		    List.fold_left2 (
+		      fun env name l ->
+			M.add name (`Def (loc, name, l, env0)) env
+		    ) env arg_names args
+		  in
+		  ignore (expand_list g app_env l);
+		  env0
+		    
+	    | Some `Special, _ -> assert false
+	in
+
+	if def = None then
 	  g.require_location := false
-	)
 	else
 	  g.require_location := true;
 
-	(match def, opt_args with
-	     None, None -> expand_node g env0 (`Text (loc, false, name))
-	   | None, Some args ->
-	       let with_sep = 
-		 add_sep
-		   [`Text (loc, false, ",")]
-		   [`Text (loc, false, ")")]
-		   args in
-	       let l =
-		 `Text (loc, false, name ^ "(") :: List.flatten with_sep in
-	       expand_list g env0 l
-		 
-	   | Some (`Defun (_, _, arg_names, _, _)), None ->
-	       error loc 
-		 (sprintf "%S expects %i arguments but is applied to none." 
-		    name (List.length arg_names))
-		 
-	   | Some (`Def _), Some l ->
-	       error loc 
-		 (sprintf "%S expects no arguments" name)
-		 
-	   | Some (`Def (_, _, l, env)), None ->
-	       ignore (expand_list g env l);
-	       env0
-		 
-	   | Some (`Defun (_, _, arg_names, l, env)), Some args ->
-	       let argc = List.length arg_names in
-	       let n = List.length args in
-	       let args =
-		 (* it's ok to pass an empty arg if one arg
-		    is expected *)
-		 if n = 0 && argc = 1 then [[]]
-		 else args
-	       in
-	       if argc <> n then
-		 error loc
-		   (sprintf "%S expects %i argument%s but is applied to \
-                               %i argument%s."
-		      name argc (plural argc) n (plural n))
-	       else
-		 let app_env =
-		   List.fold_left2 (
-		     fun env name l ->
-		       M.add name (`Def (loc, name, l, env0)) env
-		   ) env arg_names args
-		 in
-		 ignore (expand_list g app_env l);
-		 env0
+	(* restore initial setting *)
+	g.enable_loc := enable_loc0;
 
-	   | Some `Special, _ -> assert false
-	)
+	env
+
 
     | `Def (loc, name, body)-> 
 	g.require_location := true;
@@ -420,7 +448,14 @@ and expand_node ?(top = false) g env0 x =
 	  
 
 
-let include_inputs ~preserve_quotations ~incdirs buf env l =
+let include_inputs
+    ~preserve_quotations
+    ~incdirs
+    ~show_exact_locations
+    ~show_no_locations
+    buf env l =
+
+  let enable_loc = not show_no_locations in
   List.fold_left (
     fun env (dir, file, open_, close) ->
       let l = parse ~preserve_quotations file (open_ ()) in
@@ -431,6 +466,8 @@ let include_inputs ~preserve_quotations ~incdirs buf env l =
 	included = S.empty;
 	require_location = ref true;
 	last_file_loc = ref None;
+	show_exact_locations = show_exact_locations;
+	enable_loc = ref enable_loc;
 	g_preserve_quotations = preserve_quotations;
 	incdirs = incdirs;
 	current_directory = dir;

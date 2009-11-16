@@ -268,9 +268,9 @@ and ocaml_token e = parse
 
   | ")"       { e.line_start <- false; CL_PAREN (loc lexbuf) }
   | ","       { e.line_start <- false; COMMA (loc lexbuf) }
-  | "\\)"     { e.line_start <- false; TEXT (loc lexbuf, false, ")") }
-  | "\\,"     { e.line_start <- false; TEXT (loc lexbuf, false, ",") }
-  | "\\("     { e.line_start <- false; TEXT (loc lexbuf, false, "(") }
+  | "\\)"     { e.line_start <- false; TEXT (loc lexbuf, false, " )") }
+  | "\\,"     { e.line_start <- false; TEXT (loc lexbuf, false, " ,") }
+  | "\\("     { e.line_start <- false; TEXT (loc lexbuf, false, " (") }
 
   | '`'
   | "!=" | "#" | "&" | "&&" | "(" |  "*" | "+" | "-"

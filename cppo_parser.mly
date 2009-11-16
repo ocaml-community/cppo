@@ -105,14 +105,27 @@ node:
 
 | DEF full_node_list0 ENDEF
                 { let (pos1, _), name = $1 in
-		  let body = $2 in
+
+		  (* Additional spacing is needed for cases like '+foo+'
+		     expanding into '++' instead of '+ +'. *)
+		  let safe_space = `Text ($3, true, " ") in
+
+		  let body = $2 @ [safe_space] in
 		  let _, pos2 = $3 in
 		  `Def ((pos1, pos2), name, body) }
 
 | DEFUN def_args1 CL_PAREN full_node_list0 ENDEF
                 { let (pos1, _), name = $1 in
 		  let args = $2 in
-		  let body = $4 in
+
+		  (* Additional spacing is needed for cases like 'foo()bar'
+		     where 'foo()' expands into 'abc', giving 'abcbar'
+		     instead of 'abc bar';
+		     Also needed for '+foo()+' expanding into '++' instead
+		     of '+ +'. *)
+		  let safe_space = `Text ($5, true, " ") in
+
+		  let body = $4 @ [safe_space] in
 		  let _, pos2 = $5 in
 		  `Defun ((pos1, pos2), name, args, body) }
 

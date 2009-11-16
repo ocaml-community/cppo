@@ -8,6 +8,8 @@ let () =
   let incdirs = ref [] in
   let out_file = ref None in
   let preserve_quotations = ref false in
+  let show_exact_locations = ref false in
+  let show_no_locations = ref false in
   let options = [
     "-D", Arg.String (fun s -> header := ("#define " ^ s ^ "\n") :: !header),
     "DEF
@@ -28,6 +30,17 @@ let () =
     "-q", Arg.Set preserve_quotations,
     "
           Identify and preserve camlp4 quotations";
+
+    "-s", Arg.Set show_exact_locations,
+    "
+          Output line directives pointing to the exact source location of 
+          each token, including those coming from the body of macro 
+          definitions.  This behavior is off by default.";
+
+    "-n", Arg.Set show_no_locations,
+    "
+          Do not output any line directive other than those found in the 
+          input (overrides -s).";
   ]
   in
   let msg = sprintf "\
@@ -72,6 +85,8 @@ Options:" Sys.argv.(0) in
     try Cppo_eval.include_inputs
       ~preserve_quotations: !preserve_quotations
       ~incdirs: (List.rev !incdirs)
+      ~show_exact_locations: !show_exact_locations
+      ~show_no_locations: !show_no_locations
       buf env inputs
     with Cppo_types.Cppo_error msg ->
       eprintf "%s\n%!" msg;

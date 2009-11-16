@@ -59,8 +59,15 @@ test_argc(aa\,bb)
 #define test_esc(x) x
 test_esc(\,\)\()
 
-blah #define dammit shit
-blah #if true
-dammit
-x#endif
+blah #define xyz
+#ifdef xyz
+#error "xyz should not have been defined"
+#endif
 
+#define sticky1(x) _
+#define sticky2(x) sticky1()_ (* the 2 underscores should be space-separated *)
+sticky2()
+
+#define empty1
+#define empty2 +empty1+ (* there should be some space between the pluses *)
+empty2
