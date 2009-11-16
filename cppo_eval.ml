@@ -20,12 +20,15 @@ let builtin_env =
 
 let line_directive buf prev_file pos =
   let file = pos.Lexing.pos_fname in
+  let len = Buffer.length buf in
+  if len > 0 && Buffer.nth buf (len - 1) <> '\n' then
+    Buffer.add_char buf '\n';
   (match prev_file with
        Some s when s = file ->
-	 bprintf buf "\n# %i\n"
+	 bprintf buf "# %i\n"
 	   pos.Lexing.pos_lnum
      | _ ->
-	 bprintf buf "\n# %i %S\n"
+	 bprintf buf "# %i %S\n"
 	   pos.Lexing.pos_lnum
 	   pos.Lexing.pos_fname
   );
@@ -216,8 +219,11 @@ let parse ~preserve_quotations file lexbuf =
   let lexer_env = Cppo_lexer.init ~preserve_quotations file lexbuf in
   try
     Cppo_parser.main (Cppo_lexer.line lexer_env) lexbuf
-  with Parsing.Parse_error ->
-    error (Cppo_lexer.loc lexbuf) "syntax error"
+  with
+      Parsing.Parse_error ->
+	error (Cppo_lexer.loc lexbuf) "syntax error"
+    | e ->
+	error (Cppo_lexer.loc lexbuf) (Printexc.to_string e)
 
 let plural n =
   if abs n <= 1 then ""
@@ -259,7 +265,7 @@ let rec include_file g loc rel_file env =
   if S.mem file g.included then
     failwith (sprintf "Cyclic inclusion of file %S" file)
   else
-    let ic = open_in_bin file in
+    let ic = open_in file in
     let lexbuf = Lexing.from_channel ic in
     let l = parse ~preserve_quotations:g.g_preserve_quotations file lexbuf in
     close_in ic;

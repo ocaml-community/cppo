@@ -266,11 +266,18 @@ and ocaml_token e = parse
       { e.line_start <- false;
 	FUNIDENT (loc lexbuf, s) }
 
+  | "'\n'" 
+  | "'\r\n'" 
+      { new_line e;
+	TEXT (loc lexbuf, false, lexeme lexbuf) }
+
   | ")"       { e.line_start <- false; CL_PAREN (loc lexbuf) }
   | ","       { e.line_start <- false; COMMA (loc lexbuf) }
+
   | "\\)"     { e.line_start <- false; TEXT (loc lexbuf, false, " )") }
   | "\\,"     { e.line_start <- false; TEXT (loc lexbuf, false, " ,") }
   | "\\("     { e.line_start <- false; TEXT (loc lexbuf, false, " (") }
+  | "\\#"     { e.line_start <- false; TEXT (loc lexbuf, false, " #") }
 
   | '`'
   | "!=" | "#" | "&" | "&&" | "(" |  "*" | "+" | "-"
@@ -280,15 +287,10 @@ and ocaml_token e = parse
   | ">>"
   | prefix_symbol 
   | infix_symbol
-  | "'" ([^'\'''\\'] 
-  | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
+  | "'" ([^ '\'' '\\'] 
+         | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
 
       { e.line_start <- false; 
-	TEXT (loc lexbuf, false, lexeme lexbuf) }
-
-  | "'\n'" 
-  | "'\r\n'" 
-      { new_line e;
 	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | blank+
@@ -387,6 +389,17 @@ and comment e depth = parse
 	string e lexbuf;
 	comment e depth lexbuf }
       
+  | "'\n'" 
+  | "'\r\n'" 
+      { new_line e;
+	add e (lexeme lexbuf);
+	comment e depth lexbuf }
+
+  | "'" ([^ '\'' '\\'] 
+         | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
+      { add e (lexeme lexbuf);
+	comment e depth lexbuf }
+
   | '\r'? '\n'
       { 
 	new_line e;
@@ -395,6 +408,14 @@ and comment e depth = parse
       }
       
   | [^'(' '*' '"' '\r' '\n']+
+      { 
+	(* tolerates unmatched single quotes in comments, unlike the
+	   standard ocaml lexer *)
+	add e (lexeme lexbuf);
+	comment e depth lexbuf
+      }
+
+  | _
       { add e (lexeme lexbuf);
 	comment e depth lexbuf }
       

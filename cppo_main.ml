@@ -97,6 +97,6 @@ Options:" Sys.argv.(0) in
 	print_string (Buffer.contents buf);
 	flush stdout
     | Some file ->
-	let oc = open_out_bin file in
+	let oc = open_out file in
 	output_string oc (Buffer.contents buf);
 	close_out oc
