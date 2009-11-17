@@ -70,6 +70,7 @@ archive:
 		echo "*** There are uncommitted changes, aborting. ***" >&2; \
 		exit 1; \
 	fi
+	$(MAKE) && ./cppo -help > $$WWW/cppo-help.txt
 	rm -rf /tmp/cppo /tmp/cppo-$(VERSION) && \
 	 	cd /tmp && \
 		svn co "$(SVNURL)" && \
