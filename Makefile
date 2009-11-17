@@ -58,7 +58,7 @@ clean:
 		cppo_parser.mli cppo_parser.ml cppo_version.ml
 
 SUBDIRS = testdata examples
-SVNURL = svn://svn.forge.ocamlcore.org/svnroot/cppo
+SVNURL = svn://svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
 
 archive:
 	@echo "Making archive for version $(VERSION)"
