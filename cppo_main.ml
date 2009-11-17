@@ -43,6 +43,12 @@ let () =
     "
           Do not output any line directive other than those found in the 
           input (overrides -s).";
+
+    "-version", Arg.Unit (fun () ->
+			    print_endline Cppo_version.cppo_version;
+			    exit 0),
+    "
+          Print the version of the program and exit.";
   ]
   in
   let msg = sprintf "\
