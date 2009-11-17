@@ -55,7 +55,7 @@ endif
 clean:
 	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
 		cppo \
-		cppo_parser.mli cppo_parser.ml cppo_version.ml
+		cppo_parser.mli cppo_parser.ml cppo_lexer.ml cppo_version.ml
 
 SUBDIRS = testdata examples
 SVNURL = svn://svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
