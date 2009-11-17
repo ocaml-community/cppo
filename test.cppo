@@ -77,3 +77,14 @@ empty2
 #define arg
 obj
   \# define arg
+
+'  (* lone single quote *)
+
+#define one 1
+oneê is not 1 ê
+
+#undef x
+#define x #
+x is #
+
+end

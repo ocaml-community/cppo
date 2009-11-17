@@ -80,7 +80,8 @@ type env = {
   preserve_quotations : bool;
   mutable lexer : [ `Ocaml | `Test ];
   mutable line_start : bool;
-  mutable in_directive : bool;
+  mutable in_directive : bool; (* true while processing a directive, until the
+				  final newline *)
   buf : Buffer.t;
   mutable token_start : Lexing.position;
   lexbuf : Lexing.lexbuf;
@@ -105,10 +106,27 @@ let get env = Buffer.contents env.buf
 let long_loc e = (e.token_start, pos2 e.lexbuf)
 }
 
-let upper = ['A'-'Z' '\192'-'\214' '\216'-'\222']
-let lower = ['a'-'z' '\223'-'\246' '\248'-'\255']
+(* standard character classes used for macro identifiers *)
+let upper = ['A'-'Z']
+let lower = ['a'-'z']
 let digit = ['0'-'9']
-let identchar = upper | lower | digit | ['_' '\'']
+
+let identchar = upper | lower | digit | [ '_' '\'' ]
+
+
+(* iso-8859-1 upper and lower characters used for ocaml identifiers *)
+let oc_upper = ['A'-'Z' '\192'-'\214' '\216'-'\222']
+let oc_lower = ['a'-'z' '\223'-'\246' '\248'-'\255']
+let oc_identchar = oc_upper | oc_lower | digit | ['_' '\'']
+
+(*
+  Identifiers: ident is used for macro names and is a subset of oc_ident
+*)
+let ident = (lower | '_' identchar | upper) identchar*
+let oc_ident = (oc_lower | '_' oc_identchar | oc_upper) oc_identchar*
+
+
+
 let hex = ['0'-'9' 'a'-'f' 'A'-'F']
 let oct = ['0'-'7']
 let bin = ['0'-'1']
@@ -118,10 +136,6 @@ let operator_char =
 let infix_symbol =
   ['=' '<' '>' '@' '^' '|' '&' '+' '-' '*' '/' '$' '%'] operator_char*
 let prefix_symbol = ['!' '?' '~'] operator_char*
-
-let lident = (lower | '_' identchar) identchar*
-let uident = upper identchar*
-let ident = lident | uident
 
 let blank = [ ' ' '\t' ]
 let space = [ ' ' '\t' '\r' '\n' ]
@@ -158,7 +172,6 @@ and line e = parse
 		  directive e lexbuf
 		)
 		else (
-		  e.in_directive <- false;
 		  e.line_start <- false;
 		  clear e;
 		  TEXT (loc lexbuf, false, s)
@@ -192,6 +205,14 @@ and directive e = parse
   | blank* "ifndef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
 	IFDEF (long_loc e, `Not (`Defined id)) }
+
+  | blank* "define" dblank1 oc_ident
+  | blank* "undef" dblank1 oc_ident
+  | blank* "ifdef" dblank1 oc_ident
+  | blank* "ifndef" dblank1 oc_ident
+      { error (loc lexbuf)
+	  "Identifiers containing non-ASCII characters \
+           may not be used as macro identifiers" }
 
   | blank* "else"
       { blank_until_eol e lexbuf;
@@ -245,7 +266,7 @@ and blank_until_eol e = parse
     blank* eof
   | blank* '\r'? '\n' { new_line e;
 			e.in_directive <- false }
-  | ""                { lexer_error lexbuf "Missing line terminator" }
+  | ""                { lexer_error lexbuf "syntax error in directive" }
 
 and ocaml_token e = parse
     "__LINE__"
@@ -256,13 +277,15 @@ and ocaml_token e = parse
       { e.line_start <- false;
 	CURRENT_FILE (loc lexbuf) }
 
-  | uident
-  | lident as s
+  | ident as s
       { e.line_start <- false;
 	IDENT (loc lexbuf, s) }
 
-  | uident
-  | lident as s "("
+  | oc_ident as s
+      { e.line_start <- false;
+	TEXT (loc lexbuf, false, s) }
+
+  | ident as s "("
       { e.line_start <- false;
 	FUNIDENT (loc lexbuf, s) }
 
@@ -584,8 +607,7 @@ and test_token e = parse
   | "lxor"    { LXOR }
   | "lnot"    { LNOT }
 
-  | uident
-  | lident
+  | ident
       { IDENT (loc lexbuf, lexeme lexbuf) }
 
   | blank+                   { test_token e lexbuf }

@@ -222,6 +222,8 @@ let parse ~preserve_quotations file lexbuf =
   with
       Parsing.Parse_error ->
 	error (Cppo_lexer.loc lexbuf) "syntax error"
+    | Cppo_types.Cppo_error _ as e ->
+	raise e
     | e ->
 	error (Cppo_lexer.loc lexbuf) (Printexc.to_string e)
 
