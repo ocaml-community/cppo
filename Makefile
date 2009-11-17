@@ -87,7 +87,10 @@ archive:
 	cp ../releases/cppo.tar.bz2 $$WWW/
 	cp ../releases/cppo-$(VERSION).tar.gz $$WWW/
 	cp ../releases/cppo-$(VERSION).tar.bz2 $$WWW/
-	cd ../releases && svn commit -m "cppo version $(VERSION)"
+	cd ../releases && \
+		svn add cppo.tar.gz cppo.tar.bz2 \
+			cppo-$(VERSION).tar.gz cppo-$(VERSION).tar.bz2 && \
+		svn commit -m "cppo version $(VERSION)"
 	cp LICENSE $$WWW/cppo-license.txt
 	cp Changes $$WWW/cppo-changes.txt
 	echo 'let cppo_version = "$(VERSION)"' \
