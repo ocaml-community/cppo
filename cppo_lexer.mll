@@ -576,6 +576,7 @@ and test_token e = parse
   | ")"       { CL_PAREN (loc lexbuf) }
   | "&&"      { AND }
   | "||"      { OR }
+  | "not"     { NOT }
   | "="       { EQ }
   | "<"       { LT }
   | ">"       { GT }
@@ -597,8 +598,8 @@ and test_token e = parse
   | "+"       { PLUS }
   | "-"       { MINUS }
   | "*"       { STAR }
-  | "/"       { SLASH }
-  | "mod"     { MOD }
+  | "/"       { SLASH (loc lexbuf) }
+  | "mod"     { MOD (loc lexbuf) }
   | "lsl"     { LSL }
   | "lsr"     { LSR }
   | "asr"     { ASR }

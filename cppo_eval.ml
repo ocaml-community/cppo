@@ -144,23 +144,32 @@ let rec eval_int env (x : arith_expr) : int64 =
     | `Lsl (a, b) ->
 	let n = eval_int env a in
 	let shift = eval_int env b in
-	if shift >= 64L || shift <= -64L then 0L
-	else 
-	  Int64.shift_left n (Int64.to_int shift)
+	let shift =
+	  if shift >= 64L then 64L
+	  else if shift <= -64L then -64L
+	  else shift
+	in
+	Int64.shift_left n (Int64.to_int shift)
 
     | `Lsr (a, b) ->
 	let n = eval_int env a in
 	let shift = eval_int env b in
-	if shift >= 64L || shift <= -64L then 0L
-	else 
-	  Int64.shift_right_logical n (Int64.to_int shift)
+	let shift =
+	  if shift >= 64L then 64L
+	  else if shift <= -64L then -64L
+	  else shift
+	in
+	Int64.shift_right_logical n (Int64.to_int shift)
 
     | `Asr (a, b) ->
 	let n = eval_int env a in
 	let shift = eval_int env b in
-	if shift >= 64L || shift <= -64L then 0L
-	else 
-	  Int64.shift_right n (Int64.to_int shift)
+	let shift =
+	  if shift >= 64L then 64L
+	  else if shift <= -64L then -64L
+	  else shift
+	in
+	Int64.shift_right n (Int64.to_int shift)
 
     | `Land (a, b) -> Int64.logand (eval_int env a) (eval_int env b)
     | `Lor (a, b) -> Int64.logor (eval_int env a) (eval_int env b)

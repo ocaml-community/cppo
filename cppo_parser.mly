@@ -5,22 +5,7 @@
 
   let print = print_string
 
-  let rhs_loc n = (Parsing.rhs_start_pos n, Parsing.rhs_end_pos n)
-  let rhs_loc2 n1 n2 = (Parsing.rhs_start_pos n1, Parsing.rhs_end_pos n2)
-                    
-  let unclosed opening_name opening_num closing_name closing_num =
-    let msg = 
-      sprintf "%s:\nSyntax error: '%s' expected.\n\
-               %s:\nThis '%s' might be unmatched."
-        (string_of_loc (rhs_loc closing_num)) closing_name
-        (string_of_loc (rhs_loc opening_num)) opening_name in
-    failwith msg
-
-  let error1 s num =
-    error (rhs_loc num) s
-
-  let error2 s num1 num2 =
-    error (rhs_loc2 num1 num2) s
+  let rhs_loc n1 n2 = (Parsing.rhs_start_pos n1, Parsing.rhs_end_pos n2)
 %}
 
 /* Directives */
@@ -32,7 +17,8 @@
 
 /* Boolean expressions in #if/#elif directives */
 %token OP_PAREN TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
-       PLUS MINUS STAR SLASH MOD LNOT LSL LSR ASR LAND LOR LXOR
+       PLUS MINUS STAR LNOT LSL LSR ASR LAND LOR LXOR
+%token < Cppo_types.loc > SLASH MOD 
 %token < int64 > INT
 
 
@@ -224,7 +210,7 @@ test:
 bexpr:
   | TRUE                            { `True }
   | FALSE                           { `False }
-  | DEFINED OP_PAREN IDENT CL_PAREN { `Defined (snd $3) }
+  | DEFINED IDENT                   { `Defined (snd $2) }
   | OP_PAREN bexpr CL_PAREN         { $2 }
   | NOT bexpr                       { `Not $2 }
   | bexpr AND bexpr                 { `And ($1, $3) }
@@ -245,8 +231,8 @@ aexpr:
   | aexpr PLUS aexpr         { `Add ($1, $3) }
   | aexpr MINUS aexpr        { `Sub ($1, $3) }
   | aexpr STAR aexpr         { `Mul ($1, $3) }
-  | aexpr SLASH aexpr        { `Div (rhs_loc2 1 3, $1, $3) }
-  | aexpr MOD aexpr          { `Mod (rhs_loc2 1 3, $1, $3) }
+  | aexpr SLASH aexpr        { `Div ($2, $1, $3) }
+  | aexpr MOD aexpr          { `Mod ($2, $1, $3) }
   | aexpr LSL aexpr          { `Lsl ($1, $3) }
   | aexpr LSR aexpr          { `Lsr ($1, $3) }
   | aexpr ASR aexpr          { `Lsr ($1, $3) }
