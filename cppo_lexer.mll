@@ -243,13 +243,23 @@ and directive e = parse
   | blank* (['0'-'9']+ as lnum) dblank0 '\r'? '\n'
       { e.in_directive <- false;
 	new_line e;
-	LINE (long_loc e, None, int_of_string lnum) }
+	let here = long_loc e in
+	let fname = None in
+	let lnum = int_of_string lnum in
+	(* Apply line directive regardless of possible #if condition. *)
+	set_lnum lexbuf fname lnum;
+	LINE (here, None, lnum) }
 
   | blank* (['0'-'9']+ as lnum) dblank0 '"'
       { clear e;
 	eval_string e lexbuf;
 	blank_until_eol e lexbuf;
-	LINE (long_loc e, Some (get e), int_of_string lnum) }
+	let here = long_loc e in
+	let fname = Some (get e) in
+	let lnum = int_of_string lnum in
+	(* Apply line directive regardless of possible #if condition. *)
+	set_lnum lexbuf fname lnum;
+	LINE (here, fname, lnum) }
 
   | blank*
       { e.in_directive <- false;

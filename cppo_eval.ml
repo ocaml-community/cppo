@@ -415,7 +415,9 @@ and expand_node ?(top = false) g env0 x =
 	  else if_false
 	in
 	g.require_location := true;
-	expand_list g env0 l
+	let env = expand_list g env0 l in
+	g.require_location := true;
+	env
 
     | `Error (loc, msg) ->
 	error loc msg

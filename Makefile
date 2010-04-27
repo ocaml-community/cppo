@@ -1,4 +1,4 @@
-VERSION = 0.9.0
+VERSION = 0.9.1
 
 ifndef OCAMLYACC
   OCAMLYACC = ocamlyacc
@@ -56,6 +56,7 @@ clean:
 	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
 		cppo \
 		cppo_parser.mli cppo_parser.ml cppo_lexer.ml cppo_version.ml
+	cd examples; $(MAKE) clean
 
 SUBDIRS = testdata examples
 SVNURL = svn://svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
