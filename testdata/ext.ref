@@ -1,0 +1,22 @@
+# 1 "ext.cppo"
+hello
+nop
+#raqrkg
+qrs
+# 7
+goodbye
+
+# 9
+(*
+hello
+#ext rot13
+abc
+\#endext
+def
+#endext
+goodbye
+
+#ext source
+#endext
+*)
+# 11

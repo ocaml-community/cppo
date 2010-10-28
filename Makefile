@@ -16,7 +16,7 @@ ifndef BINDIR
 endif
 export BINDIR
 
-.PHONY: default all opt install clean
+.PHONY: default all opt install clean test
 
 default: opt
 
@@ -24,13 +24,14 @@ default: opt
 ML = cppo_version.ml cppo_types.ml \
      cppo_parser.mli cppo_parser.ml \
      cppo_lexer.ml \
+     cppo_command.ml \
      cppo_eval.ml cppo_main.ml
 
 all: $(ML)
-	ocamlc -o cppo -dtypes $(ML)
+	ocamlc -o cppo -dtypes unix.cma $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo -dtypes $(ML)
+	ocamlopt -o cppo -dtypes unix.cmxa $(ML)
 
 install:
 	install -m 0755 cppo $(BINDIR) || \
@@ -51,6 +52,9 @@ else
 cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml
 	$(OCAMLYACC) cppo_parser.mly
 endif
+
+test:
+	cd testdata; $(MAKE)
 
 clean:
 	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \

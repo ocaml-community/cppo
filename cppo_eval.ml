@@ -222,7 +222,12 @@ type globals = {
 
   current_directory : string;
     (* directory containing the current file *)
+
+  extensions : (string, Cppo_command.command_template) Hashtbl.t;
+    (* mapping from extension ID to pipeline command *)
 }
+
+        
 
 let parse ~preserve_quotations file lexbuf =
   let lexer_env = Cppo_lexer.init ~preserve_quotations file lexbuf in
@@ -249,6 +254,33 @@ let maybe_print_location g pos =
       line_directive g.buf prev_file pos;
       g.last_file_loc := Some file
     )
+
+let expand_ext g loc id data =
+  let cmd_tpl =
+    try Hashtbl.find g.extensions id
+    with Not_found ->
+      error loc (sprintf "Undefined extension %s" id)
+  in
+  let p1, p2 = loc in
+  let file = p1.Lexing.pos_fname in
+  let first = p1.Lexing.pos_lnum in
+  let last = p2.Lexing.pos_lnum in
+  let cmd = Cppo_command.subst cmd_tpl file first last in
+  let (ic, oc) as p = Unix.open_process cmd in
+  output_string oc data;
+  close_out oc;
+  (try
+     while true do
+       bprintf g.buf "%s\n" (input_line ic)
+     done
+   with End_of_file -> ()
+  );
+  match Unix.close_process p with
+      Unix.WEXITED 0 -> ()
+    | Unix.WEXITED n ->
+        failwith (sprintf "Command %S exited with status %i" cmd n)
+    | _ ->
+        failwith (sprintf "Command %S failed" cmd)
 
 let rec include_file g loc rel_file env =
   let file =
@@ -409,6 +441,12 @@ and expand_node ?(top = false) g env0 x =
 	g.require_location := true;
 	env
 
+    | `Ext (loc, id, data) ->
+        g.require_location := true;
+        expand_ext g loc id data;
+        g.require_location := true;
+	env0
+
     | `Cond (loc, test, if_true, if_false) ->
 	let l =
 	  if eval_bool env0 test then if_true
@@ -468,6 +506,7 @@ and expand_node ?(top = false) g env0 x =
 
 
 let include_inputs
+    ~extensions
     ~preserve_quotations
     ~incdirs
     ~show_exact_locations
@@ -490,6 +529,7 @@ let include_inputs
 	g_preserve_quotations = preserve_quotations;
 	incdirs = incdirs;
 	current_directory = dir;
+        extensions = extensions;
       }
       in
       expand_list ~top:true { g with included = S.add file g.included } env l

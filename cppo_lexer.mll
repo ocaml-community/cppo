@@ -206,10 +206,17 @@ and directive e = parse
       { blank_until_eol e lexbuf;
 	IFDEF (long_loc e, `Not (`Defined id)) }
 
+  | blank* "ext" dblank1 (ident as id)
+      { blank_until_eol e lexbuf;
+        clear e;
+        let s = read_ext e lexbuf in
+        EXT (long_loc e, id, s) }
+
   | blank* "define" dblank1 oc_ident
   | blank* "undef" dblank1 oc_ident
   | blank* "ifdef" dblank1 oc_ident
   | blank* "ifndef" dblank1 oc_ident
+  | blank* "ext" dblank1 oc_ident
       { error (loc lexbuf)
 	  "Identifiers containing non-ASCII characters \
            may not be used as macro identifiers" }
@@ -277,6 +284,28 @@ and blank_until_eol e = parse
   | blank* '\r'? '\n' { new_line e;
 			e.in_directive <- false }
   | ""                { lexer_error lexbuf "syntax error in directive" }
+
+and read_ext e = parse
+    blank* "#" blank* "endext" blank* ('\r'? '\n' | eof)
+      { let s = get e in
+        clear e;
+	new_line e;
+        e.in_directive <- false;
+        s }
+
+  | (blank* as a) "\\" ("#" blank* "endext" blank* '\r'? '\n' as b)
+      { add e a;
+        add e b;
+        new_line e;
+        read_ext e lexbuf }
+
+  | [^'\n']* '\n' as x
+      { add e x;
+        new_line e;
+        read_ext e lexbuf }
+
+  | eof
+      { lexer_error lexbuf "End of file within #ext ... #endext" }
 
 and ocaml_token e = parse
     "__LINE__"

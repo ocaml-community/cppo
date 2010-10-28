@@ -2,7 +2,22 @@
 
 open Printf
 
+let add_extension tbl s =
+  let i =
+    try String.index s ':' 
+    with Not_found ->
+      failwith "Invalid -x argument"
+  in
+  let id = String.sub s 0 i in
+  let raw_tpl = String.sub s (i+1) (String.length s - i - 1) in
+  let cmd_tpl = Cppo_command.parse raw_tpl in
+  if Hashtbl.mem tbl id then
+    failwith ("Multiple definitions for extension " ^ id)
+  else
+    Hashtbl.add tbl id cmd_tpl
+
 let () =
+  let extensions = Hashtbl.create 10 in
   let files = ref [] in
   let header = ref [] in
   let incdirs = ref [] in
@@ -49,6 +64,25 @@ let () =
 			    exit 0),
     "
           Print the version of the program and exit.";
+
+    "-x", Arg.String (fun s -> add_extension extensions s),
+    "NAME:CMD_TEMPLATE
+          Define a custom preprocessor target section starting with:
+            #ext \"NAME\"
+          and ending with:
+            #endext
+
+          NAME must be a lowercase identifier of the form [a-z][A-Za-z0-9_]*
+
+          CMD_TEMPLATE is a command template supporting the following
+          special sequences:
+            %F  file name (unescaped!)
+            %B  number of the first line
+            %E  number of the last line
+            %%  a single percent sign
+
+          The command produced is expected to read the data lines from stdin
+          and to write its output to stdout."
   ]
   in
   let msg = sprintf "\
@@ -91,14 +125,16 @@ Options:" Sys.argv.(0) in
   let buf = Buffer.create 10_000 in
   let _env =
     try Cppo_eval.include_inputs
+      ~extensions
       ~preserve_quotations: !preserve_quotations
       ~incdirs: (List.rev !incdirs)
       ~show_exact_locations: !show_exact_locations
       ~show_no_locations: !show_no_locations
       buf env inputs
-    with Cppo_types.Cppo_error msg ->
-      eprintf "%s\n%!" msg;
-      exit 1
+    with Cppo_types.Cppo_error msg
+      | Failure msg ->
+          eprintf "Error: %s\n%!" msg;
+          exit 1
   in
   match !out_file with
       None ->

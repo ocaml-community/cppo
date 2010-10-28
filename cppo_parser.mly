@@ -12,8 +12,8 @@
 %token < Cppo_types.loc * string > DEF DEFUN UNDEF INCLUDE WARNING ERROR
 %token < Cppo_types.loc * string option * int > LINE
 %token < Cppo_types.loc * Cppo_types.bool_expr > IFDEF
+%token < Cppo_types.loc * string * string > EXT
 %token < Cppo_types.loc > ENDEF IF ELIF ELSE ENDIF ENDTEST
-
 
 /* Boolean expressions in #if/#elif directives */
 %token OP_PAREN TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
@@ -129,6 +129,8 @@ node:
 | INCLUDE
                 { `Include $1 }
 
+| EXT
+                { `Ext $1 }
 
 | IF test full_node_list0 elif_list ENDIF
                 { let pos1, _ = $1 in

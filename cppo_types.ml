@@ -50,6 +50,7 @@ and node =
     | `Defun of (loc * string * string list * node list)
     | `Undef of (loc * string)
     | `Include of (loc * string)
+    | `Ext of (loc * string * string)
     | `Cond of (loc * bool_expr * node list * node list)
     | `Error of (loc * string)
     | `Warning of (loc * string)
