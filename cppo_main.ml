@@ -76,10 +76,14 @@ let () =
 
           CMD_TEMPLATE is a command template supporting the following
           special sequences:
-            %F  file name (unescaped!)
+            %F  file name (unescaped; beware of potential scripting attacks)
             %B  number of the first line
             %E  number of the last line
             %%  a single percent sign
+
+          Filename, first line number and last line number are also
+          available from the following environment variables:
+          CPPO_FILE, CPPO_FIRST_LINE, CPPO_LAST_LINE.
 
           The command produced is expected to read the data lines from stdin
           and to write its output to stdout."

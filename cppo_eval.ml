@@ -266,6 +266,9 @@ let expand_ext g loc id data =
   let first = p1.Lexing.pos_lnum in
   let last = p2.Lexing.pos_lnum in
   let cmd = Cppo_command.subst cmd_tpl file first last in
+  Unix.putenv "CPPO_FILE" file;
+  Unix.putenv "CPPO_FIRST_LINE" (string_of_int first);
+  Unix.putenv "CPPO_LAST_LINE" (string_of_int last);
   let (ic, oc) as p = Unix.open_process cmd in
   output_string oc data;
   close_out oc;
