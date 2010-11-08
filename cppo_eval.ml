@@ -448,6 +448,7 @@ and expand_node ?(top = false) g env0 x =
         g.require_location := true;
         expand_ext g loc id data;
         g.require_location := true;
+        g.last_file_loc := None;
 	env0
 
     | `Cond (loc, test, if_true, if_false) ->
