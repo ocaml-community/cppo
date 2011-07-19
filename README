@@ -19,4 +19,85 @@ Cppo is:
 Syntax
 ======
 
-;-)
+Cppo is a preprocessor for programming languages that follow lexical rules
+compatible with OCaml.
+
+Cppo supports a number of directives. A directive is a '#' sign placed
+at the beginning of a line, possibly preceded by some whitespace, and followed
+by a valid directive name or by a number:
+
+  BLANK* "#" BLANK* ("define"|"undef"
+                    |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
+                    |"include"
+                    |"warning"|"error"
+                    |"ext"|"endext") ...
+
+
+1. Definition and undefinition of values and functions
+------------------------------------------------------
+
+The user can define constant values and functions, called macros.
+
+Defining a value:
+
+  #define X 1024
+  #define abc "xyz"
+  #define BEGIN (
+  #define END )
+
+Defining a function:
+
+  #define Z 5
+  #define F(x,y) BEGIN x + \
+    y + Z END
+  F(0,1)
+
+expands into:
+
+  ( 0 + 1 + 5 )
+
+In a function definition, there must be no space between the function name,
+parentheses, parameters and commas. This allows to distinguish cppo's
+function calls from OCaml function calls.
+
+It is illegal to define a value or function if it is already defined.
+
+
+Undefining a value or function:
+
+  #undef X
+
+It is always legal to undefine a value, even if it is not defined.
+
+
+2. Conditionals
+---------------
+
+#if, #ifdef, #ifndef, #else, #elif, #endif
+
+
+3. File inclusion
+-----------------
+
+#include 
+
+
+4. Source file location
+-----------------------
+
+# 123
+# 123 "test"
+
+
+5. Messages
+-----------
+
+#warning
+
+#error
+
+
+6. Call to an external processor
+--------------------------------
+
+#ext, #endext
