@@ -240,7 +240,40 @@ command-line to external command 'tr "[A-Z]" "[a-z]"' that reads
 input from stdin and writes its output to stdout.
 
 
-7. Detailed command-line usage and options
+7. Escaping
+-----------
+
+The following characters can be escaped by a backslash when needed: 
+  (
+  )
+  ,
+  #
+
+In OCaml # is used for method calls. It is usually not a problem
+because in order to be interpreted as a preprocessor directive, it
+must be the first non-blank character of a line and be a known
+directive. If an object has a define method and you want # to appear
+first on a line, you would have to use \# instead:
+
+  obj
+    \#define
+
+Line directives in the usual format supported by OCaml are correctly
+interpreted by cppo.
+
+Comments and string literals constitute single tokens even when they
+span across multiple lines. Therefore newlines within string literals
+and comments should remain as-is (no preceding backslash) even in a
+macro body:
+
+  #define welcome \
+  "**********
+  *Welcome!*
+  **********
+  "
+
+
+8. Detailed command-line usage and options
 ------------------------------------------
 
 Usage: ./cppo [OPTIONS] [FILE1 [FILE2 ...]]
