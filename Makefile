@@ -63,7 +63,7 @@ clean:
 	cd examples; $(MAKE) clean
 
 SUBDIRS = testdata examples
-SVNURL = svn://svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
+SVNURL = svn+ssh://mjambon@svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
 
 archive:
 	@echo "Making archive for version $(VERSION)"
