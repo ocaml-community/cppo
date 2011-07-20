@@ -1,11 +1,12 @@
-                          cppo: cpp for OCaml
-                          -------------------
+                          +=======================+
+                          |  cppo: cpp for OCaml  |
+                          +=======================+
 
-Features
-========
+Introduction
+============
 
 Cppo is an equivalent of the C preprocessor for OCaml programs.
-It allows defining simple macros and file inclusion.
+It allows the definition of simple macros and file inclusion.
 
 Cppo is:
 
@@ -15,9 +16,8 @@ Cppo is:
 - simple to install and to maintain (unlike camlp4-based tools)
 
 
-
-Syntax
-======
+User guide
+==========
 
 Cppo is a preprocessor for programming languages that follow lexical rules
 compatible with OCaml.
@@ -32,72 +32,264 @@ by a valid directive name or by a number:
                     |"warning"|"error"
                     |"ext"|"endext") ...
 
-
-1. Definition and undefinition of values and functions
-------------------------------------------------------
-
-The user can define constant values and functions, called macros.
-
-Defining a value:
-
-  #define X 1024
-  #define abc "xyz"
-  #define BEGIN (
-  #define END )
-
-Defining a function:
-
-  #define Z 5
-  #define F(x,y) BEGIN x + \
-    y + Z END
-  F(0,1)
-
-expands into:
-
-  ( 0 + 1 + 5 )
-
-In a function definition, there must be no space between the function name,
-parentheses, parameters and commas. This allows to distinguish cppo's
-function calls from OCaml function calls.
-
-It is illegal to define a value or function if it is already defined.
+Directives can be split into multiple lines by placing a backslash \ at
+the end of the line to be continued. In general, any special character
+can used as a normal character by preceding it with backslash.
 
 
-Undefining a value or function:
+1. File inclusion
+-----------------
+
+  #include "hello.ml"
+
+This is how a source file "hello.ml" can be included.
+Relative paths are searched first in the directory of the current file
+and then in the search paths added on the command line using -I, if any.
+
+
+2. Macros
+---------
+
+This is a simple macro that doesn't take an argument ("object-like
+macro" in the cpp jargon):
+
+  #define Ms Mississippi
+  
+  match state with
+      Ms -> true
+    | _ -> false
+
+After preprocessing by cppo, the code above becomes: 
+match state with
+      Mississippi -> true
+    | _ -> false
+
+If needed, defined macros can be undefined. This is required prior to
+redefining a macro:
 
   #undef X
 
-It is always legal to undefine a value, even if it is not defined.
+An important distinction with cpp is that only previously-defined
+macros are accessible. Defining, undefining or redefining a macro has
+no effect on how previous macros will expand.
+
+Macros can take arguments ("function-like macro" in the cpp
+jargon). Both in the definition (#define) and in macro application the
+opening parenthesis must stick to the macro's identifier:
+
+  #define debug(args) if !debugging then Printf.eprintf args else ()
+
+  debug("Testing %i" (1 + 1))
+
+is expanded into:
+
+  if !debugging then Printf.eprintf "Testing %i" (1 + 1) else ()
+
+Here is a multiline macro definition. Newlines occurring between
+tokens must be protected by a backslash:
+
+  #define repeat_until(action,condition) \
+    action; \
+    while not (condition) do \
+      action \
+    done
+
+All user-definable macros are constant. There are however two
+predefined variable macros: __FILE__ and __LINE__ which take the value
+of the position in the source file where the macro is being expanded.
+
+  #define loc (Printf.sprintf "File %S, line %i" __FILE__ __LINE__)
+
+Macros can be defined on the command line as follows:
+
+  # preprocessing only
+  cppo -D 'VERSION 1.0' example.ml
+
+  # preprocessing and compiling
+  ocamlopt -c -pp "cppo -D 'VERSION 1.0'" example.ml
 
 
-2. Conditionals
+3. Conditionals
 ---------------
 
-#if, #ifdef, #ifndef, #else, #elif, #endif
+Here is a quick reference on conditionals available in cppo. If you
+are not familiar with #ifdef, #ifndef, #if, #else and #elif, please
+refer to the corresponding section in the cpp manual.
 
+  #ifndef VERSION
+  #warning "VERSION is undefined"
+  #define VERSION "n/a"
+  #endif
+  #ifndef VERSION
+  #error "VERSION is undefined"
+  #endif
+  #if OCAML_MAJOR >= 3 && OCAML_MINOR >= 10
+  ...
+  #endif
+  #ifdef X
+  ...
+  #elif defined Y
+  ...
+  #else
+  ...
+  #endif
 
-3. File inclusion
------------------
+The boolean expressions following #if and #elif may perform arithmetic
+operations and tests over 64-bit ints.
 
-#include 
+Boolean expressions:
+
+  defined ...    followed by an identifier, returns true if such a macro exists
+  true    
+  false   
+  ( ... )
+  ... && ...
+  ... || ...
+  not ...
+
+Arithmetic comparisons used in boolean expressions:
+
+  ... = ...
+  ... < ...
+  ... > ...
+  ... <> ...
+  ... <= ...
+  ... >= ...
+
+Arithmetic operators over signed 64-bit ints:
+
+  ( ... )
+  ... + ...
+  ... - ...
+  ... * ...
+  ... /  ...
+  ... mod ...
+  ... lsl ...
+  ... lsr ...
+  ... asr ...
+  ... land ...
+  ... lor ...
+  ... lxor ...
+  lnot ... 
+
+Macro identifiers can be used in place of ints as long as they expand
+to an int literal, e.g.:
+
+  #define one 1
+  
+  #if one + one <> 2
+  #error "Something's wrong."
+  #endif
 
 
 4. Source file location
 -----------------------
 
-# 123
-# 123 "test"
+Location directives are the same as OCaml and are echoed in the
+output. They consist of a line number optionally followed by a file name:
+
+  # 123
+  # 456 "source"
 
 
 5. Messages
 -----------
 
-#warning
+Warnings and error messages can be produced by the preprocessor:
 
-#error
+  #ifndef X
+    #warning "Assuming default value for X"
+    #define X 1
+  #elif X = 0
+    #error "X may not be null"
+  #endif
 
 
-6. Call to an external processor
+6. Calling an external processor
 --------------------------------
 
-#ext, #endext
+Cppo provides a mechanism for converting sections of a file using
+and external program. Such a section must be placed between #ext and
+#endext directives.
+
+  $ cat foo
+  ABC
+  #ext lowercase
+  DEF
+  #endext
+  GHI
+  #ext lowercase
+  KLM
+  NOP
+  #endext
+  QRS
+  
+  $ cppo -x lowercase:'tr "[A-Z]" "[a-z]"' foo
+  # 1 "foo"
+  ABC
+  def
+  # 5 "foo"
+  GHI
+  klm
+  nop
+  # 10 "foo"
+  QRS
+
+In the example above, "lowercase" is the name given on the
+command-line to external command 'tr "[A-Z]" "[a-z]"' that reads
+input from stdin and writes its output to stdout.
+
+
+7. Detailed command-line usage and options
+------------------------------------------
+
+Usage: ./cppo [OPTIONS] [FILE1 [FILE2 ...]]
+Options:
+  -D DEF
+          Equivalent of interpreting '#define DEF' before processing the
+          input
+  -U IDENT
+          Equivalent of interpreting '#undef IDENT' before processing the
+          input
+  -I DIR
+          Add directory DIR to the search path for included files
+  -o FILE
+          Output file
+  -q 
+          Identify and preserve camlp4 quotations
+  -s 
+          Output line directives pointing to the exact source location of 
+          each token, including those coming from the body of macro 
+          definitions.  This behavior is off by default.
+  -n 
+          Do not output any line directive other than those found in the 
+          input (overrides -s).
+  -version 
+          Print the version of the program and exit.
+  -x NAME:CMD_TEMPLATE
+          Define a custom preprocessor target section starting with:
+            #ext "NAME"
+          and ending with:
+            #endext
+
+          NAME must be a lowercase identifier of the form [a-z][A-Za-z0-9_]*
+
+          CMD_TEMPLATE is a command template supporting the following
+          special sequences:
+            %F  file name (unescaped; beware of potential scripting attacks)
+            %B  number of the first line
+            %E  number of the last line
+            %%  a single percent sign
+
+          Filename, first line number and last line number are also
+          available from the following environment variables:
+          CPPO_FILE, CPPO_FIRST_LINE, CPPO_LAST_LINE.
+
+          The command produced is expected to read the data lines from stdin
+          and to write its output to stdout.
+  -help  Display this list of options
+  --help  Display this list of options
+
+
+------------------------------------------------------------------------------
+Martin Jambon <martin@mjambon.com>
