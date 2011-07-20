@@ -1,5 +1,6 @@
 2011-07-20: release 0.9.1
   [+ui] Added support for processing sections of files using external programs
         (#ext/#endext, -x option)
+  [doc] Moved and extended documentation into the README file.
 
 2009-11-17: initial version 0.9.0
