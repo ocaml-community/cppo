@@ -7,16 +7,24 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
+let empty_env = M.empty
+
 let builtins = [
-  "__LINE__";
-  "__FILE__"
+  "__FILE__", (fun env -> `Special);
+  "__LINE__", (fun env -> `Special);
+  "STRINGIFY", (fun env ->
+              `Defun (dummy_loc, "STRINGIFY",
+                      ["x"],
+                      [`Stringify [`Ident (dummy_loc, "x", None)]],
+                      env)
+           );
 ]
 
 let is_reserved s =
-  List.mem s builtins
+  List.exists (fun (s', _) -> s = s') builtins
 
 let builtin_env =
-  List.fold_right (fun s -> M.add s `Special) builtins M.empty
+  List.fold_left (fun env (s, f) -> M.add s (f env) env) M.empty builtins
 
 let line_directive buf prev_file pos =
   let file = pos.Lexing.pos_fname in
@@ -40,7 +48,7 @@ let rec add_sep sep last = function
   | x :: l -> x :: sep :: add_sep sep last l 
 
 
-let strip s =
+let trim s =
   let len = String.length s in
   let is_space = function ' ' | '\t' | '\n' | '\r' -> true | _ -> false in
   let first = 
@@ -75,12 +83,35 @@ let strip s =
     ""
 
 let int_of_string_with_space s =
-  try Some (Int64.of_string (strip s))
+  try Some (Int64.of_string (trim s))
   with _ -> None
 
 let remove_space l =
   List.filter (function `Text (_, true, _) -> false | _ -> true) l
 
+let trim_and_compact buf s =
+  let started = ref false in
+  let need_space = ref false in
+  for i = 0 to String.length s - 1 do
+    match s.[i] with
+        ' ' | '\t' | '\n' | '\r' ->
+          if !started then
+            need_space := true
+      | c ->
+          if !need_space then
+            Buffer.add_char buf ' ';
+          (match c with 
+               '\"' -> Buffer.add_string buf "\\\""
+             | '\\' -> Buffer.add_string buf "\\\\"
+             | c -> Buffer.add_char buf c);
+          started := true;
+          need_space := false
+  done
+
+let stringify buf s =
+  Buffer.add_char buf '\"';
+  trim_and_compact buf s;
+  Buffer.add_char buf '\"'
 
 let rec eval_int env (x : arith_expr) : int64 =
   match x with
@@ -194,7 +225,7 @@ type globals = {
     (* location used to set the value of
        __FILE__ and __LINE__ global variables *)
 
-  buf : Buffer.t;
+  mutable buf : Buffer.t;
     (* buffer where the output is written *)
 
   included : S.t;
@@ -479,6 +510,18 @@ and expand_node ?(top = false) g env0 x =
     | `Seq l ->
 	expand_list g env0 l
 
+    | `Stringify l ->
+        let enable_loc0 = !(g.enable_loc) in
+        g.enable_loc := false;
+        let buf0 = g.buf in
+        let local_buf = Buffer.create 100 in
+        g.buf <- local_buf;
+        ignore (expand_list g env0 l);
+        stringify buf0 (Buffer.contents local_buf);
+        g.buf <- buf0;
+        g.enable_loc := enable_loc0;
+        env0
+
     | `Line (loc, opt_file, n) ->
 	(* printing a line directive is not strictly needed *)
 	(match opt_file with
@@ -524,7 +567,7 @@ let include_inputs
       close ();
       let g = {
 	call_loc = dummy_loc;
-	buf = buf;
+        buf = buf;
 	included = S.empty;
 	require_location = ref true;
 	last_file_loc = ref None;
