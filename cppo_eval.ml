@@ -148,7 +148,8 @@ let concat loc x y =
   let s = trim_and_compact_string x ^ trim_and_compact_string y in
   if not (s = "" || is_ident s) then
     error loc
-      (sprintf "CONCAT() does not expand into a valid identifier: %S" s)
+      (sprintf "CONCAT() does not expand into a valid identifier nor \
+                into whitespace:\n%S" s)
   else
     if s = "" then " "
     else " " ^ s ^ " "
