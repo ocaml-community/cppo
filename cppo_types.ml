@@ -56,7 +56,8 @@ and node =
     | `Warning of (loc * string)
     | `Text of (loc * bool * string) (* bool is true for space tokens *)
     | `Seq of node list
-    | `Stringify of node list
+    | `Stringify of node
+    | `Concat of (node * node)
     | `Line of (loc * string option * int)
     | `Current_line of loc
     | `Current_file of loc ]

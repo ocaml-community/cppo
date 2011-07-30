@@ -1,12 +1,5 @@
 (* comment *)
 
-#include "testdata/incl.cppo"
-# 123456
-#789 "test"
-#include "testdata/incl.cppo"
-
-#define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
-
 #define pi 3.14
 f(1)
 #define f(x) x+pi
@@ -105,5 +98,48 @@ good maths
 #else
 #error "math error"
 #endif
+
+
+#undef f
+#undef g
+#undef x
+#undef y
+
+#define trace(f) \
+let f x = \
+  printf "call %s\n%!" STRINGIFY(f); \
+  let y = f x in \
+  printf "return %s\n%!" STRINGIFY(f); \
+  y \
+;;
+
+trace(g)
+
+#define field(name,type) \
+  val mutable name : type option \
+  method CONCAT(get_, name) = name \
+  method CONCAT(set_, name) x = name <- Some x
+
+class foo () =
+object
+  field(field_1, int)
+  field(field_2, string)
+end
+
+#define DEBUG(x) \
+  (if !debug then \
+    eprintf "[debug] %s %i: " __FILE__ __LINE__; \
+    eprintf x; \
+    eprintf "\n")
+DEBUG("test1 %i %i" x y)
+DEBUG("test2 %i" x)
+
+#include "testdata/incl.cppo"
+# 123456
+
+#789 "test"
+#include "testdata/incl.cppo"
+
+#define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
 
 end

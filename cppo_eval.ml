@@ -13,11 +13,18 @@ let builtins = [
   "__FILE__", (fun env -> `Special);
   "__LINE__", (fun env -> `Special);
   "STRINGIFY", (fun env ->
-              `Defun (dummy_loc, "STRINGIFY",
-                      ["x"],
-                      [`Stringify [`Ident (dummy_loc, "x", None)]],
-                      env)
-           );
+                  `Defun (dummy_loc, "STRINGIFY",
+                          ["x"],
+                          [`Stringify (`Ident (dummy_loc, "x", None))],
+                          env)
+               );
+  "CONCAT", (fun env ->
+               `Defun (dummy_loc, "CONCAT",
+                       ["x";"y"],
+                       [`Concat (`Ident (dummy_loc, "x", None),
+                                 `Ident (dummy_loc, "y", None))],
+                       env)
+            );
 ]
 
 let is_reserved s =
@@ -112,6 +119,39 @@ let stringify buf s =
   Buffer.add_char buf '\"';
   trim_and_compact buf s;
   Buffer.add_char buf '\"'
+
+let trim_and_compact_string s =
+  let buf = Buffer.create (String.length s) in
+  trim_and_compact buf s;
+  Buffer.contents buf
+
+let is_ident s =
+  let len = String.length s in
+  len > 0
+  && 
+    (match s.[0] with
+         'A'..'Z' | 'a'..'z' -> true
+       | '_' when len > 1 -> true
+       | _ -> false)
+  &&
+    (try
+       for i = 1 to len - 1 do
+         match s.[i] with
+             'A'..'Z' | 'a'..'z' | '_' | '0'..'9' -> ()
+           | _ -> raise Exit
+       done;
+       true
+     with Exit ->
+       false)
+
+let concat loc x y =
+  let s = trim_and_compact_string x ^ trim_and_compact_string y in
+  if not (s = "" || is_ident s) then
+    error loc
+      (sprintf "CONCAT() does not expand into a valid identifier: %S" s)
+  else
+    if s = "" then " "
+    else " " ^ s ^ " "
 
 let rec eval_int env (x : arith_expr) : int64 =
   match x with
@@ -510,14 +550,31 @@ and expand_node ?(top = false) g env0 x =
     | `Seq l ->
 	expand_list g env0 l
 
-    | `Stringify l ->
+    | `Stringify x ->
         let enable_loc0 = !(g.enable_loc) in
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
         g.buf <- local_buf;
-        ignore (expand_list g env0 l);
+        ignore (expand_node g env0 x);
         stringify buf0 (Buffer.contents local_buf);
+        g.buf <- buf0;
+        g.enable_loc := enable_loc0;
+        env0
+
+    | `Concat (x, y) ->
+        let enable_loc0 = !(g.enable_loc) in
+        g.enable_loc := false;
+        let buf0 = g.buf in
+        let local_buf = Buffer.create 100 in
+        g.buf <- local_buf;
+        ignore (expand_node g env0 x);
+        let xs = Buffer.contents local_buf in
+        Buffer.clear local_buf;
+        ignore (expand_node g env0 y);
+        let ys = Buffer.contents local_buf in
+        let s = concat g.call_loc xs ys in
+        Buffer.add_string buf0 s;
         g.buf <- buf0;
         g.enable_loc := enable_loc0;
         env0
