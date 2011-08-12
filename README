@@ -272,8 +272,54 @@ macro body:
   **********
   "
 
+8. Concatenation
+----------------
 
-8. Detailed command-line usage and options
+CONCAT() is a predefined macro that takes two arguments, removes any
+whitespace between and around them and fuses them into a single identifier.
+The result of the concatenation must be a valid identifier of the
+form [A-Za-z_][A-Za-z0-9_]+ or [A-Za-z], or empty.
+
+For example,
+
+  #define x 123
+  CONCAT(z, x)
+
+expands into:
+
+  z123
+
+However the following is illegal:
+
+  #define x 123
+  CONCAT(x, z)
+
+because 123z does not form a valid identifier.
+
+CONCAT(a,b) is roughly the equivalent a##b in cpp syntax.
+
+
+9. Stringification
+------------------
+
+STRINGIFY() is a predefined macro that takes one argument, removes any leading
+and trailing whitespace, reduces each internal whitespace sequence to 
+a single space character and produces a valid OCaml string literal.
+
+For example,
+
+  #define TRACE(f) Printf.printf ">>> %s\n" STRINGIFY(f); f
+  TRACE(print_endline) "Hello"
+
+is expanded into:
+
+  Printf.printf ">>> %s\n" "print_endline"; print_endline "Hello"
+
+
+STRINGIFY(x) is the equivalent of #x in cpp syntax.
+
+
+10. Detailed command-line usage and options
 ------------------------------------------
 
 Usage: ./cppo [OPTIONS] [FILE1 [FILE2 ...]]

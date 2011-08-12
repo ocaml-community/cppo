@@ -1,4 +1,4 @@
-VERSION = 0.9.1
+VERSION = 0.9.2
 
 ifndef OCAMLYACC
   OCAMLYACC = ocamlyacc
@@ -20,7 +20,6 @@ export BINDIR
 
 default: opt
 
-# ML = cppo_types.ml cppo_parser.mli cppo_parser.ml cppo.ml
 ML = cppo_version.ml cppo_types.ml \
      cppo_parser.mli cppo_parser.ml \
      cppo_lexer.ml \
