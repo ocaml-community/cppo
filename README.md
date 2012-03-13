@@ -1,262 +1,290 @@
-                          +=======================+
-                          |  cppo: cpp for OCaml  |
-                          +=======================+
-
-Introduction
-============
+Cppo: cpp for OCaml
+===================
 
 Cppo is an equivalent of the C preprocessor for OCaml programs.
 It allows the definition of simple macros and file inclusion.
 
 Cppo is:
 
-- OCaml-friendly (unlike cpp)
-- easy to learn without consulting a manual (unlike m4 or camlp4)
-- reasonably fast (unlike camlmix)
-- simple to install and to maintain (unlike camlp4-based tools)
+* more OCaml-friendly than cpp
+* easy to learn without consulting a manual
+* reasonably fast
+* simple to install and to maintain
 
 
 User guide
-==========
+----------
 
 Cppo is a preprocessor for programming languages that follow lexical rules
 compatible with OCaml.
 
-Cppo supports a number of directives. A directive is a '#' sign placed
+Cppo supports a number of directives. A directive is a `#` sign placed
 at the beginning of a line, possibly preceded by some whitespace, and followed
 by a valid directive name or by a number:
 
-  BLANK* "#" BLANK* ("define"|"undef"
-                    |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
-                    |"include"
-                    |"warning"|"error"
-                    |"ext"|"endext") ...
+```ocaml
+BLANK* "#" BLANK* ("define"|"undef"
+                  |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
+                  |"include"
+                  |"warning"|"error"
+                  |"ext"|"endext") ...
+```
 
-Directives can be split into multiple lines by placing a backslash \ at
+Directives can be split into multiple lines by placing a backslash `\` at
 the end of the line to be continued. In general, any special character
 can used as a normal character by preceding it with backslash.
 
 
-1. File inclusion
------------------
+File inclusion
+--------------
 
-  #include "hello.ml"
+```ocaml
+#include "hello.ml"
+```
 
-This is how a source file "hello.ml" can be included.
+This is how a source file `hello.ml` can be included.
 Relative paths are searched first in the directory of the current file
-and then in the search paths added on the command line using -I, if any.
+and then in the search paths added on the command line using `-I`, if any.
 
 
-2. Macros
----------
+Macros
+------
 
 This is a simple macro that doesn't take an argument ("object-like
 macro" in the cpp jargon):
 
-  #define Ms Mississippi
-  
-  match state with
-      Ms -> true
-    | _ -> false
+```ocaml
+#define Ms Mississippi
+
+match state with
+    Ms -> true
+  | _ -> false
+```
 
 After preprocessing by cppo, the code above becomes: 
+
+```ocaml
 match state with
-      Mississippi -> true
-    | _ -> false
+    Mississippi -> true
+  | _ -> false
+```
 
 If needed, defined macros can be undefined. This is required prior to
 redefining a macro:
 
-  #undef X
+```ocaml
+#undef X
+```
 
 An important distinction with cpp is that only previously-defined
 macros are accessible. Defining, undefining or redefining a macro has
 no effect on how previous macros will expand.
 
 Macros can take arguments ("function-like macro" in the cpp
-jargon). Both in the definition (#define) and in macro application the
+jargon). Both in the definition (`#define`) and in macro application the
 opening parenthesis must stick to the macro's identifier:
 
-  #define debug(args) if !debugging then Printf.eprintf args else ()
+```ocaml
+#define debug(args) if !debugging then Printf.eprintf args else ()
 
-  debug("Testing %i" (1 + 1))
+debug("Testing %i" (1 + 1))
+```
 
 is expanded into:
 
-  if !debugging then Printf.eprintf "Testing %i" (1 + 1) else ()
+```ocaml
+if !debugging then Printf.eprintf "Testing %i" (1 + 1) else ()
+```
 
 Here is a multiline macro definition. Newlines occurring between
 tokens must be protected by a backslash:
 
-  #define repeat_until(action,condition) \
-    action; \
-    while not (condition) do \
-      action \
-    done
+```ocaml
+#define repeat_until(action,condition) \
+  action; \
+  while not (condition) do \
+    action \
+  done
+```
 
 All user-definable macros are constant. There are however two
-predefined variable macros: __FILE__ and __LINE__ which take the value
+predefined variable macros: `__FILE__` and `__LINE__` which take the value
 of the position in the source file where the macro is being expanded.
 
-  #define loc (Printf.sprintf "File %S, line %i" __FILE__ __LINE__)
+```ocaml
+#define loc (Printf.sprintf "File %S, line %i" __FILE__ __LINE__)
+```
 
 Macros can be defined on the command line as follows:
 
-  # preprocessing only
-  cppo -D 'VERSION 1.0' example.ml
+```ocaml
+# preprocessing only
+cppo -D 'VERSION 1.0' example.ml
 
-  # preprocessing and compiling
-  ocamlopt -c -pp "cppo -D 'VERSION 1.0'" example.ml
+# preprocessing and compiling
+ocamlopt -c -pp "cppo -D 'VERSION 1.0'" example.ml
+```
 
-
-3. Conditionals
----------------
+Conditionals
+------------
 
 Here is a quick reference on conditionals available in cppo. If you
-are not familiar with #ifdef, #ifndef, #if, #else and #elif, please
+are not familiar with `#ifdef`, `#ifndef`, `#if`, `#else` and `#elif`, please
 refer to the corresponding section in the cpp manual.
 
-  #ifndef VERSION
-  #warning "VERSION is undefined"
-  #define VERSION "n/a"
-  #endif
-  #ifndef VERSION
-  #error "VERSION is undefined"
-  #endif
-  #if OCAML_MAJOR >= 3 && OCAML_MINOR >= 10
-  ...
-  #endif
-  #ifdef X
-  ...
-  #elif defined Y
-  ...
-  #else
-  ...
-  #endif
+```ocaml
+#ifndef VERSION
+#warning "VERSION is undefined"
+#define VERSION "n/a"
+#endif
+#ifndef VERSION
+#error "VERSION is undefined"
+#endif
+#if OCAML_MAJOR >= 3 && OCAML_MINOR >= 10
+...
+#endif
+#ifdef X
+...
+#elif defined Y
+...
+#else
+...
+#endif
+```
 
-The boolean expressions following #if and #elif may perform arithmetic
+The boolean expressions following `#if` and `#elif` may perform arithmetic
 operations and tests over 64-bit ints.
 
 Boolean expressions:
 
-  defined ...    followed by an identifier, returns true if such a macro exists
-  true    
-  false   
-  ( ... )
-  ... && ...
-  ... || ...
-  not ...
+* `defined` ...  followed by an identifier, returns true if such a macro exists
+* `true`
+* `false`
+* `(` ... `)`
+* ... `&&` ...
+* ... `||` ...
+* `not` ...
 
 Arithmetic comparisons used in boolean expressions:
 
-  ... = ...
-  ... < ...
-  ... > ...
-  ... <> ...
-  ... <= ...
-  ... >= ...
+* ... `=` ...
+* ... `<` ...
+* ... `>` ...
+* ... `<>` ...
+* ... `<=` ...
+* ... `>=` ...
 
 Arithmetic operators over signed 64-bit ints:
 
-  ( ... )
-  ... + ...
-  ... - ...
-  ... * ...
-  ... /  ...
-  ... mod ...
-  ... lsl ...
-  ... lsr ...
-  ... asr ...
-  ... land ...
-  ... lor ...
-  ... lxor ...
-  lnot ... 
+* `(` ... `)`
+* ... `+` ...
+* ... `-` ...
+* ... `*` ...
+* ... `/` ...
+* ... `mod` ...
+* ... `lsl` ...
+* ... `lsr` ...
+* ... `asr` ...
+* ... `land` ...
+* ... `lor` ...
+* ... `lxor` ...
+* `lnot` ... 
 
 Macro identifiers can be used in place of ints as long as they expand
 to an int literal, e.g.:
 
-  #define one 1
-  
-  #if one + one <> 2
-  #error "Something's wrong."
-  #endif
+```ocaml
+#define one 1
 
+#if one + one <> 2
+#error "Something's wrong."
+#endif
+```
 
-4. Source file location
------------------------
+Source file location
+--------------------
 
 Location directives are the same as OCaml and are echoed in the
 output. They consist of a line number optionally followed by a file name:
 
-  # 123
-  # 456 "source"
+```ocaml
+# 123
+# 456 "source"
+```
 
-
-5. Messages
------------
+Messages
+--------
 
 Warnings and error messages can be produced by the preprocessor:
 
-  #ifndef X
-    #warning "Assuming default value for X"
-    #define X 1
-  #elif X = 0
-    #error "X may not be null"
-  #endif
+```ocaml
+#ifndef X
+  #warning "Assuming default value for X"
+  #define X 1
+#elif X = 0
+  #error "X may not be null"
+#endif
+```
 
-
-6. Calling an external processor
---------------------------------
+Calling an external processor
+-----------------------------
 
 Cppo provides a mechanism for converting sections of a file using
-and external program. Such a section must be placed between #ext and
-#endext directives.
+and external program. Such a section must be placed between `#ext` and
+`#endext` directives.
 
-  $ cat foo
-  ABC
-  #ext lowercase
-  DEF
-  #endext
-  GHI
-  #ext lowercase
-  KLM
-  NOP
-  #endext
-  QRS
-  
-  $ cppo -x lowercase:'tr "[A-Z]" "[a-z]"' foo
-  # 1 "foo"
-  ABC
-  def
-  # 5 "foo"
-  GHI
-  klm
-  nop
-  # 10 "foo"
-  QRS
+```bash
+$ cat foo
+ABC
+#ext lowercase
+DEF
+#endext
+GHI
+#ext lowercase
+KLM
+NOP
+#endext
+QRS
 
-In the example above, "lowercase" is the name given on the
-command-line to external command 'tr "[A-Z]" "[a-z]"' that reads
+$ cppo -x lowercase:'tr "[A-Z]" "[a-z]"' foo
+# 1 "foo"
+ABC
+def
+# 5 "foo"
+GHI
+klm
+nop
+# 10 "foo"
+QRS
+```
+
+In the example above, `lowercase` is the name given on the
+command-line to external command `'tr "[A-Z]" "[a-z]"'` that reads
 input from stdin and writes its output to stdout.
 
 
-7. Escaping
------------
+Escaping
+--------
 
 The following characters can be escaped by a backslash when needed: 
-  (
-  )
-  ,
-  #
 
-In OCaml # is used for method calls. It is usually not a problem
+```ocaml
+(
+)
+,
+#
+```
+
+In OCaml `#` is used for method calls. It is usually not a problem
 because in order to be interpreted as a preprocessor directive, it
 must be the first non-blank character of a line and be a known
-directive. If an object has a define method and you want # to appear
-first on a line, you would have to use \# instead:
+directive. If an object has a define method and you want `#` to appear
+first on a line, you would have to use `\#` instead:
 
-  obj
-    \#define
+```ocaml
+obj
+  \#define
+```
 
 Line directives in the usual format supported by OCaml are correctly
 interpreted by cppo.
@@ -266,62 +294,75 @@ span across multiple lines. Therefore newlines within string literals
 and comments should remain as-is (no preceding backslash) even in a
 macro body:
 
-  #define welcome \
-  "**********
-  *Welcome!*
-  **********
-  "
+```ocaml
+#define welcome \
+"**********
+*Welcome!*
+**********
+"
+```
 
-8. Concatenation
-----------------
+Concatenation
+-------------
 
-CONCAT() is a predefined macro that takes two arguments, removes any
+`CONCAT()` is a predefined macro that takes two arguments, removes any
 whitespace between and around them and fuses them into a single identifier.
 The result of the concatenation must be a valid identifier of the
 form [A-Za-z_][A-Za-z0-9_]+ or [A-Za-z], or empty.
 
 For example,
 
-  #define x 123
-  CONCAT(z, x)
+```ocaml
+#define x 123
+CONCAT(z, x)
+```
 
 expands into:
 
-  z123
+```ocaml
+z123
+```
 
 However the following is illegal:
 
-  #define x 123
-  CONCAT(x, z)
+```ocaml
+#define x 123
+CONCAT(x, z)
+```
 
 because 123z does not form a valid identifier.
 
-CONCAT(a,b) is roughly the equivalent a##b in cpp syntax.
+`CONCAT(a,b)` is roughly equivalent to `a##b` in cpp syntax.
 
 
-9. Stringification
-------------------
+Stringification
+---------------
 
-STRINGIFY() is a predefined macro that takes one argument, removes any leading
-and trailing whitespace, reduces each internal whitespace sequence to 
-a single space character and produces a valid OCaml string literal.
+`STRINGIFY()` is a predefined macro that takes one argument,
+removes any leading and trailing whitespace, reduces each internal
+whitespace sequence to a single space character and produces
+a valid OCaml string literal.
 
 For example,
 
-  #define TRACE(f) Printf.printf ">>> %s\n" STRINGIFY(f); f
-  TRACE(print_endline) "Hello"
+```ocaml
+#define TRACE(f) Printf.printf ">>> %s\n" STRINGIFY(f); f
+TRACE(print_endline) "Hello"
+```
 
 is expanded into:
 
-  Printf.printf ">>> %s\n" "print_endline"; print_endline "Hello"
+```ocaml
+Printf.printf ">>> %s\n" "print_endline"; print_endline "Hello"
+```
+
+`STRINGIFY(x)` is the equivalent of `#x` in cpp syntax.
 
 
-STRINGIFY(x) is the equivalent of #x in cpp syntax.
+Detailed command-line usage and options
+---------------------------------------
 
-
-10. Detailed command-line usage and options
-------------------------------------------
-
+```
 Usage: ./cppo [OPTIONS] [FILE1 [FILE2 ...]]
 Options:
   -D DEF
@@ -368,7 +409,9 @@ Options:
           and to write its output to stdout.
   -help  Display this list of options
   --help  Display this list of options
+```
 
+Author
+------
 
-------------------------------------------------------------------------------
 Martin Jambon <martin@mjambon.com>
