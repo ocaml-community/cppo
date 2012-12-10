@@ -1,5 +1,11 @@
 VERSION = 0.9.3
 
+ifeq "$(shell ocamlc -config |grep os_type)" "os_type: Win32"
+EXE=.exe
+else
+EXE=
+endif
+
 ifndef OCAMLYACC
   OCAMLYACC = ocamlyacc
   #OCAMLYACC = menhir
@@ -27,10 +33,10 @@ ML = cppo_version.ml cppo_types.ml \
      cppo_eval.ml cppo_main.ml
 
 all: $(ML)
-	ocamlc -o cppo -dtypes unix.cma $(ML)
+	ocamlc -o cppo$(EXE) -dtypes unix.cma $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo -dtypes unix.cmxa $(ML)
+	ocamlopt -o cppo$(EXE) -dtypes unix.cmxa $(ML)
 
 install:
 	install -m 0755 cppo $(BINDIR) || \
