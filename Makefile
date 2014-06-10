@@ -25,8 +25,11 @@ export BINDIR
 
 
 BEST := opt
-NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then echo YES; else echo NO; fi)
-
+NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then \
+                        echo YES; \
+                      else \
+                        echo NO; \
+                      fi)
 
 OCAMLBUILD_IMPL := ocamlbuild_cppo.cma
 
@@ -69,7 +72,8 @@ install-bin:
 		install -m 0755 cppo.exe $(BINDIR)
 
 install-lib:
-	ocamlfind install -patch-version ${VERSION} "cppo_ocamlbuild" META $(OCAMLBUILD_INSTALL)
+	ocamlfind install -patch-version ${VERSION} "cppo_ocamlbuild" \
+		META $(OCAMLBUILD_INSTALL)
 
 cppo_version.ml: Makefile
 	echo 'let cppo_version = "$(VERSION)"' > cppo_version.ml
@@ -96,44 +100,3 @@ clean:
 		cppo_parser.mli cppo_parser.ml cppo_lexer.ml cppo_version.ml
 	cd examples; $(MAKE) clean
 	cd ocamlbuild_plugin; ocamlbuild -clean
-
-SUBDIRS = testdata examples
-SVNURL = svn+ssh://mjambon@svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
-
-archive:
-	@echo "Making archive for version $(VERSION)"
-	@if [ -z "$$WWW" ]; then \
-		echo '*** Environment variable WWW is undefined ***' >&2; \
-		exit 1; \
-	fi
-	@if [ -n "$$(svn status -q)" ]; then \
-		echo "*** There are uncommitted changes, aborting. ***" >&2; \
-		exit 1; \
-	fi
-	$(MAKE) && ./cppo -help > $$WWW/cppo-help.txt
-	rm -rf /tmp/cppo /tmp/cppo-$(VERSION) && \
-	 	cd /tmp && \
-		svn co "$(SVNURL)" && \
-		for x in "." $(SUBDIRS); do \
-			rm -rf /tmp/cppo/$$x/.svn; \
-		done && \
-		cd /tmp && cp -r cppo cppo-$(VERSION) && \
-		tar czf cppo.tar.gz cppo && \
-		tar cjf cppo.tar.bz2 cppo && \
-		tar czf cppo-$(VERSION).tar.gz cppo-$(VERSION) && \
-		tar cjf cppo-$(VERSION).tar.bz2 cppo-$(VERSION)
-	mv /tmp/cppo.tar.gz /tmp/cppo.tar.bz2 ../releases
-	mv /tmp/cppo-$(VERSION).tar.gz /tmp/cppo-$(VERSION).tar.bz2 ../releases
-	cp ../releases/cppo.tar.gz $$WWW/
-	cp ../releases/cppo.tar.bz2 $$WWW/
-	cp ../releases/cppo-$(VERSION).tar.gz $$WWW/
-	cp ../releases/cppo-$(VERSION).tar.bz2 $$WWW/
-	cd ../releases && \
-		svn add cppo.tar.gz cppo.tar.bz2 \
-			cppo-$(VERSION).tar.gz cppo-$(VERSION).tar.bz2 && \
-		svn commit -m "cppo version $(VERSION)"
-	cp README $$WWW/cppo-manual-$(VERSION).txt
-	cp LICENSE $$WWW/cppo-license.txt
-	cp Changes $$WWW/cppo-changes.txt
-	echo 'let cppo_version = "$(VERSION)"' \
-		> $$WWW/cppo-version.ml
