@@ -359,6 +359,38 @@ Printf.printf ">>> %s\n" "print_endline"; print_endline "Hello"
 `STRINGIFY(x)` is the equivalent of `#x` in cpp syntax.
 
 
+Ocamlbuild plugin
+------------------
+
+An ocamlbuild plugin is available. To use it, you can call ocamlbuild with the argument `--plugin-tag package(cppo_ocamlbuild)` (only since 4.01).
+
+With Oasis :
+```
+OCamlVersion: >= 4.01
+AlphaFeatures: ocamlbuild_more_args
+XOCamlbuildPluginTags: package(cppo_ocamlbuild)
+```
+
+After that, you need to add in your `myocamlbuild.ml` :
+```ocaml
+let () =
+  Ocamlbuild_plugin.dispatch
+    (fun hook ->
+      Ocamlbuild_cppo.dispatcher hook ;
+    )
+```
+
+The plugin will apply cppo on all files ending in `.cppo.ml` in order to produce`.ml` files. The following tags are available:
+* `cppo_D(X)` ≡ `-D X`
+* `cppo_U(X)` ≡ `-U X`
+* `cppo_q` ≡ `-q`
+* `cppo_s` ≡ `-s`
+* `cppo_n` ≡ `-n`
+* `cppo_x(NAME:CMD_TEMPLATE)` ≡ `-x NAME:CMD_TEMPLATE`
+* The tag `cppo_I(foo)` can behave in two way:
+  * If `foo` is a directory, it's equivalent to `-I foo`.
+  * If `foo` is a file, it adds `foo` as a dependency and apply `-I parent(foo)`.
+
 Detailed command-line usage and options
 ---------------------------------------
 

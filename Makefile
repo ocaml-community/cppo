@@ -22,9 +22,28 @@ ifndef BINDIR
 endif
 export BINDIR
 
+
+
+BEST := opt
+NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then echo YES; else echo NO; fi)
+
+
+OCAMLBUILD_IMPL := ocamlbuild_cppo.cma
+
+ifeq "${BEST}" "opt"
+OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxa ocamlbuild_cppo.a
+ifeq "${NATDYNLINK}" "YES"
+OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxs
+endif
+endif
+
+OCAMLBUILD_INSTALL = ocamlbuild_plugin/_build/ocamlbuild_cppo.cmi \
+                     $(addprefix ocamlbuild_plugin/_build/,$(OCAMLBUILD_IMPL))
+
+
 .PHONY: default all opt install clean test
 
-default: opt
+default: opt ocamlbuild
 
 ML = cppo_version.ml cppo_types.ml \
      cppo_parser.mli cppo_parser.ml \
@@ -32,15 +51,25 @@ ML = cppo_version.ml cppo_types.ml \
      cppo_command.ml \
      cppo_eval.ml cppo_main.ml
 
+OCAMLBUILD_ML = ocamlbuild_cppo.ml
+
 all: $(ML)
 	ocamlc -o cppo$(EXE) -dtypes unix.cma $(ML)
 
 opt: $(ML)
 	ocamlopt -o cppo$(EXE) -dtypes unix.cmxa $(ML)
 
-install:
+ocamlbuild:
+	cd ocamlbuild_plugin && ocamlbuild -use-ocamlfind $(OCAMLBUILD_IMPL)
+
+install: install-bin install-lib
+
+install-bin:
 	install -m 0755 cppo $(BINDIR) || \
 		install -m 0755 cppo.exe $(BINDIR)
+
+install-lib:
+	ocamlfind install -patch-version ${VERSION} "cppo_ocamlbuild" META $(OCAMLBUILD_INSTALL)
 
 cppo_version.ml: Makefile
 	echo 'let cppo_version = "$(VERSION)"' > cppo_version.ml
@@ -66,6 +95,7 @@ clean:
 		cppo \
 		cppo_parser.mli cppo_parser.ml cppo_lexer.ml cppo_version.ml
 	cd examples; $(MAKE) clean
+	cd ocamlbuild_plugin; ocamlbuild -clean
 
 SUBDIRS = testdata examples
 SVNURL = svn+ssh://mjambon@svn.forge.ocamlcore.org/svnroot/cppo/trunk/cppo
