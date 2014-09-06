@@ -1,5 +1,3 @@
-(* $Id$ *)
-
 open Printf
 
 let add_extension tbl s =

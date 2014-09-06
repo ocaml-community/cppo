@@ -1,5 +1,3 @@
-(* $Id$ *)
-
 open Printf
 
 type command_token =
