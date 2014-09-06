@@ -1,5 +1,4 @@
 {
-
 open Printf
 open Lexing
 
@@ -382,7 +381,7 @@ and ocaml_token e = parse
       { clear e;
 	add e "(*";
 	e.token_start <- pos1 lexbuf;
-	comment e 1 lexbuf }
+	comment (loc lexbuf) e 1 lexbuf }
 
   | '"'
       { clear e;
@@ -430,16 +429,16 @@ and ocaml_token e = parse
       { EOF }
 
 
-and comment e depth = parse
+and comment startloc e depth = parse
     "(*"
       { add e "(*";
-	comment e (depth + 1) lexbuf }
+	comment startloc e (depth + 1) lexbuf }
 
   | "*)"
       { let depth = depth - 1 in
 	add e "*)";
 	if depth > 0 then
-	  comment e depth lexbuf
+	  comment startloc e depth lexbuf
 	else (
 	  e.line_start <- false;
 	  TEXT (long_loc e, false, get e)
@@ -448,40 +447,38 @@ and comment e depth = parse
   | '"'
       { add_char e '"';
 	string e lexbuf;
-	comment e depth lexbuf }
+	comment startloc e depth lexbuf }
 
   | "'\n'"
   | "'\r\n'"
       { new_line e;
 	add e (lexeme lexbuf);
-	comment e depth lexbuf }
+	comment startloc e depth lexbuf }
 
   | "'" ([^ '\'' '\\']
          | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
       { add e (lexeme lexbuf);
-	comment e depth lexbuf }
+	comment startloc e depth lexbuf }
 
   | '\r'? '\n'
       {
 	new_line e;
 	add e (lexeme lexbuf);
-	comment e depth lexbuf
+	comment startloc e depth lexbuf
       }
 
-  | [^'(' '*' '"' '\r' '\n']+
+  | [^'(' '*' '"' '\'' '\r' '\n']+
       {
-	(* tolerates unmatched single quotes in comments, unlike the
-	   standard ocaml lexer *)
 	add e (lexeme lexbuf);
-	comment e depth lexbuf
+	comment startloc e depth lexbuf
       }
 
   | _
       { add e (lexeme lexbuf);
-	comment e depth lexbuf }
+	comment startloc e depth lexbuf }
 
   | eof
-      { lexer_error lexbuf "Unterminated comment reaching the end of file" }
+      { error startloc "Unterminated comment reaching the end of file" }
 
 
 and string e = parse
