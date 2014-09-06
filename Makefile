@@ -92,7 +92,7 @@ cppo_parser.mli cppo_parser.ml: cppo_parser.mly cppo_types.ml
 endif
 
 test:
-	cd testdata; $(MAKE)
+	$(MAKE) -C test
 
 clean:
 	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
