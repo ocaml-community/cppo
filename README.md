@@ -61,7 +61,7 @@ match state with
   | _ -> false
 ```
 
-After preprocessing by cppo, the code above becomes: 
+After preprocessing by cppo, the code above becomes:
 
 ```ocaml
 match state with
@@ -188,7 +188,7 @@ Arithmetic operators over signed 64-bit ints:
 * ... `land` ...
 * ... `lor` ...
 * ... `lxor` ...
-* `lnot` ... 
+* `lnot` ...
 
 Macro identifiers can be used in place of ints as long as they expand
 to an int literal, e.g.:
@@ -266,7 +266,7 @@ input from stdin and writes its output to stdout.
 Escaping
 --------
 
-The following characters can be escaped by a backslash when needed: 
+The following characters can be escaped by a backslash when needed:
 
 ```ocaml
 (
@@ -407,16 +407,16 @@ Options:
           Add directory DIR to the search path for included files
   -o FILE
           Output file
-  -q 
+  -q
           Identify and preserve camlp4 quotations
-  -s 
-          Output line directives pointing to the exact source location of 
-          each token, including those coming from the body of macro 
+  -s
+          Output line directives pointing to the exact source location of
+          each token, including those coming from the body of macro
           definitions.  This behavior is off by default.
-  -n 
-          Do not output any line directive other than those found in the 
+  -n
+          Do not output any line directive other than those found in the
           input (overrides -s).
-  -version 
+  -version
           Print the version of the program and exit.
   -x NAME:CMD_TEMPLATE
           Define a custom preprocessor target section starting with:

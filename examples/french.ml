@@ -14,7 +14,7 @@
 #define tri sort
 
 soit rec separation x = fonction
-    y :: l -> 
+    y :: l ->
       soit l1, l2 = separation x l dans
       si y < x alors (y :: l1), l2
       sinon l1, (y :: l2)

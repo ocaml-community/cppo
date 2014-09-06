@@ -48,17 +48,17 @@ let line_directive buf prev_file pos =
 	   pos.Lexing.pos_fname
   );
   bprintf buf "%s" (String.make (pos.Lexing.pos_cnum - pos.Lexing.pos_bol) ' ')
-    
+
 let rec add_sep sep last = function
     [] -> [ last ]
   | [x] -> [ x; last ]
-  | x :: l -> x :: sep :: add_sep sep last l 
+  | x :: l -> x :: sep :: add_sep sep last l
 
 
 let trim s =
   let len = String.length s in
   let is_space = function ' ' | '\t' | '\n' | '\r' -> true | _ -> false in
-  let first = 
+  let first =
     let x = ref len in
     (try
        for i = 0 to len - 1 do
@@ -107,7 +107,7 @@ let trim_and_compact buf s =
       | c ->
           if !need_space then
             Buffer.add_char buf ' ';
-          (match c with 
+          (match c with
                '\"' -> Buffer.add_string buf "\\\""
              | '\\' -> Buffer.add_string buf "\\\\"
              | c -> Buffer.add_char buf c);
@@ -128,7 +128,7 @@ let trim_and_compact_string s =
 let is_ident s =
   let len = String.length s in
   len > 0
-  && 
+  &&
     (match s.[0] with
          'A'..'Z' | 'a'..'z' -> true
        | '_' when len > 1 -> true
@@ -162,14 +162,14 @@ let rec eval_int env (x : arith_expr) : int64 =
 	  try
 	    match M.find name env with
 		`Def (_, _, l, _) -> l
-	      | `Defun _ -> 
+	      | `Defun _ ->
 		  error loc (sprintf "%S expects arguments" name)
 	      | `Special -> assert false
 	  with Not_found -> error loc (sprintf "Undefined identifier %S" name)
 	in
 	(try
 	   match remove_space l with
-	       [ `Ident (loc, name, None) ] -> 
+	       [ `Ident (loc, name, None) ] ->
 		 eval_int env (`Ident (loc, name))
 	     | _ ->
 		 let text =
@@ -185,8 +185,8 @@ let rec eval_int env (x : arith_expr) : int64 =
 		 in
 		 let s = String.concat "" text in
 		 (match int_of_string_with_space s with
-		      None -> 
-			error loc 
+		      None ->
+			error loc
 			  (sprintf
 			     "Identifier %S is not bound to an int literal"
 			     name)
@@ -206,7 +206,7 @@ let rec eval_int env (x : arith_expr) : int64 =
 	 with Division_by_zero ->
 	   error loc "Division by zero")
 
-    | `Mod (loc, a, b) -> 
+    | `Mod (loc, a, b) ->
 	(try Int64.rem (eval_int env a) (eval_int env b)
 	 with Division_by_zero ->
 	   error loc "Division by zero")
@@ -260,7 +260,7 @@ let rec eval_bool env (x : bool_expr) =
     | `Lt (a, b) -> eval_int env a < eval_int env b
     | `Gt (a, b) -> eval_int env a > eval_int env b
 
-    
+
 type globals = {
   call_loc : Cppo_types.loc;
     (* location used to set the value of
@@ -299,7 +299,7 @@ type globals = {
     (* mapping from extension ID to pipeline command *)
 }
 
-        
+
 
 let parse ~preserve_quotations file lexbuf =
   let lexer_env = Cppo_lexer.init ~preserve_quotations file lexbuf in
@@ -366,7 +366,7 @@ let rec include_file g loc rel_file env =
 	error loc (sprintf "Included file %S does not exist" rel_file)
     else
       try
-	let dir = 
+	let dir =
 	  List.find (
 	    fun dir ->
 	      let file = Filename.concat dir rel_file in
@@ -377,7 +377,7 @@ let rec include_file g loc rel_file env =
 	  rel_file
 	else
 	  Filename.concat dir rel_file
-      with Not_found -> 
+      with Not_found ->
 	error loc (sprintf "Cannot find included file %S" rel_file)
   in
   if S.mem file g.included then
@@ -428,7 +428,7 @@ and expand_node ?(top = false) g env0 x =
 	      None, None ->
 		expand_node g env0 (`Text (loc, false, name))
 	    | None, Some args ->
-		let with_sep = 
+		let with_sep =
 		  add_sep
 		    [`Text (loc, false, ",")]
 		    [`Text (loc, false, ")")]
@@ -436,20 +436,20 @@ and expand_node ?(top = false) g env0 x =
 		let l =
 		  `Text (loc, false, name ^ "(") :: List.flatten with_sep in
 		expand_list g env0 l
-		  
+		
 	    | Some (`Defun (_, _, arg_names, _, _)), None ->
-		error loc 
-		  (sprintf "%S expects %i arguments but is applied to none." 
+		error loc
+		  (sprintf "%S expects %i arguments but is applied to none."
 		     name (List.length arg_names))
-		  
+		
 	    | Some (`Def _), Some l ->
-		error loc 
+		error loc
 		  (sprintf "%S expects no arguments" name)
-		  
+		
 	    | Some (`Def (_, _, l, env)), None ->
 		ignore (expand_list g env l);
 		env0
-		  
+		
 	    | Some (`Defun (_, _, arg_names, l, env)), Some args ->
 		let argc = List.length arg_names in
 		let n = List.length args in
@@ -473,7 +473,7 @@ and expand_node ?(top = false) g env0 x =
 		  in
 		  ignore (expand_list g app_env l);
 		  env0
-		    
+		
 	    | Some `Special, _ -> assert false
 	in
 
@@ -488,7 +488,7 @@ and expand_node ?(top = false) g env0 x =
 	env
 
 
-    | `Def (loc, name, body)-> 
+    | `Def (loc, name, body)->
 	g.require_location := true;
 	if M.mem name env0 then
 	  error loc (sprintf "%S is already defined" name)
@@ -505,7 +505,7 @@ and expand_node ?(top = false) g env0 x =
     | `Undef (loc, name) ->
 	g.require_location := true;
 	if is_reserved name then
-	  error loc 
+	  error loc
 	    (sprintf "%S is a built-in variable that cannot be undefined" name)
 	else
 	  M.remove name env0
@@ -607,7 +607,7 @@ and expand_node ?(top = false) g env0 x =
 	bprintf g.buf " %S " pos.Lexing.pos_fname;
 	env0
 
-	  
+	
 
 
 let include_inputs

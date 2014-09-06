@@ -18,7 +18,7 @@
 /* Boolean expressions in #if/#elif directives */
 %token OP_PAREN TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
        PLUS MINUS STAR LNOT LSL LSR ASR LAND LOR LXOR
-%token < Cppo_types.loc > SLASH MOD 
+%token < Cppo_types.loc > SLASH MOD
 %token < int64 > INT
 
 

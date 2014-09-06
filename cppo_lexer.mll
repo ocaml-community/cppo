@@ -1,6 +1,5 @@
-(* $Id$ *)
 {
-  
+
 open Printf
 open Lexing
 
@@ -25,7 +24,7 @@ let lex_new_lines lb =
       incr n
   done;
   let p = lb.lex_curr_p in
-  lb.lex_curr_p <- 
+  lb.lex_curr_p <-
     { p with
 	pos_lnum = p.pos_lnum + !n;
 	pos_bol = p.pos_cnum
@@ -33,7 +32,7 @@ let lex_new_lines lb =
 
 let count_new_lines lb n =
   let p = lb.lex_curr_p in
-  lb.lex_curr_p <- 
+  lb.lex_curr_p <-
     { p with
 	pos_lnum = p.pos_lnum + n;
 	pos_bol = p.pos_cnum
@@ -131,7 +130,7 @@ let hex = ['0'-'9' 'a'-'f' 'A'-'F']
 let oct = ['0'-'7']
 let bin = ['0'-'1']
 
-let operator_char = 
+let operator_char =
   [ '!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>' '?' '@' '^' '|' '~']
 let infix_symbol =
   ['=' '<' '>' '@' '^' '|' '&' '+' '-' '*' '/' '$' '%'] operator_char*
@@ -159,7 +158,7 @@ rule token e = parse
 
 and line e = parse
     blank* "#" as s
-        { 
+        {
 	  match e.lexer with
 	      `Test -> lexer_error lexbuf "Syntax error in boolean expression"
 	    | `Ocaml ->
@@ -182,7 +181,7 @@ and line e = parse
 	  token e lexbuf }
 
 and directive e = parse
-    blank* "define" dblank1 (ident as id) "(" 
+    blank* "define" dblank1 (ident as id) "("
       { DEFUN (long_loc e, id) }
 
   | blank* "define" dblank1 (ident as id)
@@ -234,7 +233,7 @@ and directive e = parse
 	eval_string e lexbuf;
 	blank_until_eol e lexbuf;
 	INCLUDE (long_loc e, get e) }
-  
+
   | blank* "error" dblank0 '"'
       { clear e;
 	eval_string e lexbuf;
@@ -328,8 +327,8 @@ and ocaml_token e = parse
       { e.line_start <- false;
 	FUNIDENT (loc lexbuf, s) }
 
-  | "'\n'" 
-  | "'\r\n'" 
+  | "'\n'"
+  | "'\r\n'"
       { new_line e;
 	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
@@ -347,12 +346,12 @@ and ocaml_token e = parse
   | "<-" | "=" | ">" | ">]" | ">}" | "?" | "??" | "[" | "[<" | "[>" | "[|"
   | "]" | "_" | "`" | "{" | "{<" | "|" | "|]" | "}" | "~"
   | ">>"
-  | prefix_symbol 
+  | prefix_symbol
   | infix_symbol
-  | "'" ([^ '\'' '\\'] 
+  | "'" ([^ '\'' '\\']
          | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
 
-      { e.line_start <- false; 
+      { e.line_start <- false;
 	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
   | blank+
@@ -415,8 +414,8 @@ and ocaml_token e = parse
 	 | ("0o"| "0O") oct (oct | '_')*	
 	 | ("0b"| "0B") bin (bin | '_')* )
 
-  | '-'? digit (digit | '_')* ('.' (digit | '_')* )? 
-      (['e' 'E'] ['+' '-']? digit (digit | '_')* )? 
+  | '-'? digit (digit | '_')* ('.' (digit | '_')* )?
+      (['e' 'E'] ['+' '-']? digit (digit | '_')* )?
       { e.line_start <- false;
 	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
@@ -427,7 +426,7 @@ and ocaml_token e = parse
       { e.line_start <- false;
 	TEXT (loc lexbuf, false, lexeme lexbuf) }
 
-  | eof 
+  | eof
       { EOF }
 
 
@@ -435,9 +434,9 @@ and comment e depth = parse
     "(*"
       { add e "(*";
 	comment e (depth + 1) lexbuf }
-      
+
   | "*)"
-      { let depth = depth - 1 in 
+      { let depth = depth - 1 in
 	add e "*)";
 	if depth > 0 then
 	  comment e depth lexbuf
@@ -450,27 +449,27 @@ and comment e depth = parse
       { add_char e '"';
 	string e lexbuf;
 	comment e depth lexbuf }
-      
-  | "'\n'" 
-  | "'\r\n'" 
+
+  | "'\n'"
+  | "'\r\n'"
       { new_line e;
 	add e (lexeme lexbuf);
 	comment e depth lexbuf }
 
-  | "'" ([^ '\'' '\\'] 
+  | "'" ([^ '\'' '\\']
          | '\\' (_ | digit digit digit | 'x' hex hex)) "'"
       { add e (lexeme lexbuf);
 	comment e depth lexbuf }
 
   | '\r'? '\n'
-      { 
+      {
 	new_line e;
 	add e (lexeme lexbuf);
 	comment e depth lexbuf
       }
-      
+
   | [^'(' '*' '"' '\r' '\n']+
-      { 
+      {
 	(* tolerates unmatched single quotes in comments, unlike the
 	   standard ocaml lexer *)
 	add e (lexeme lexbuf);
@@ -480,27 +479,27 @@ and comment e depth = parse
   | _
       { add e (lexeme lexbuf);
 	comment e depth lexbuf }
-      
+
   | eof
       { lexer_error lexbuf "Unterminated comment reaching the end of file" }
-      
-      
+
+
 and string e = parse
     '"'
       { add_char e '"' }
-      
+
   | "\\\\"
   | '\\' '"'
       { add e (lexeme lexbuf);
 	string e lexbuf }
-      
+
   | '\\' '\r'? '\n'
       {
 	add e (lexeme lexbuf);
 	new_line e;
 	string e lexbuf
       }
-      
+
   | '\r'? '\n'
       {
 	if e.in_directive then
@@ -511,19 +510,19 @@ and string e = parse
 	  string e lexbuf
 	)
       }
-      
+
   | _ as c
       { add_char e c;
 	string e lexbuf }
-      
+
   | eof
       { }
-      
+
 
 and eval_string e = parse
     '"'
       {  }
-      
+
   | '\\' (['\'' '\"' '\\'] as c)
       { add_char e c;
 	eval_string e lexbuf }
@@ -531,47 +530,47 @@ and eval_string e = parse
   | '\\' '\r'? '\n'
       { assert e.in_directive;
         eval_string e lexbuf }
-      
+
   | '\r'? '\n'
       { assert e.in_directive;
         lexer_error lexbuf "Unterminated string literal" }
-      
+
   | '\\' (digit digit digit as s)
       { add_char e (Char.chr (int_of_string s));
 	eval_string e lexbuf }
-      
+
   | '\\' 'x' (hex as c1) (hex as c2)
       { add_char e (read_hex2 c1 c2);
 	eval_string e lexbuf }
-      
+
   | '\\' 'b'
       { add_char e '\b';
 	eval_string e lexbuf }
-      
+
   | '\\' 'n'
       { add_char e '\n';
 	eval_string e lexbuf }
-      
+
   | '\\' 'r'
       { add_char e '\r';
 	eval_string e lexbuf }
-      
+
   | '\\' 't'
       { add_char e '\t';
 	eval_string e lexbuf }
-      
+
   | [^ '\"' '\\']+
       { add e (lexeme lexbuf);
 	eval_string e lexbuf }
-      
+
   | eof
       { lexer_error lexbuf "Unterminated string literal" }
-      
-      
+
+
 and quotation e = parse
     ">>"
       { add e ">>" }
-      
+
   | "\\>>"
       { add e "\\>>";
 	quotation e lexbuf }
@@ -588,7 +587,7 @@ and quotation e = parse
 	  quotation e lexbuf
 	)
       }
-      
+
   | '\r'? '\n'
       {
 	if e.in_directive then
@@ -599,12 +598,12 @@ and quotation e = parse
 	  quotation e lexbuf
 	)
       }
-      
+
   | [^'>' '\\' '\r' '\n']+
       { add e (lexeme lexbuf);
 	quotation e lexbuf }
-      
-  | eof 
+
+  | eof
       { lexer_error lexbuf "Unterminated quotation" }
 
 and test_token e = parse
@@ -629,7 +628,7 @@ and test_token e = parse
 	 | ("0b"| "0B") bin (bin | '_')* )
       { let s = Lexing.lexeme lexbuf in
 	try INT (Int64.of_string s)
-	with _ -> 
+	with _ ->
 	  error (loc lexbuf)
 	    (sprintf "Integer constant %s is out the valid range for int64" s)
       }
@@ -653,7 +652,7 @@ and test_token e = parse
   | blank+                   { test_token e lexbuf }
   | '\\' '\r'? '\n'          { new_line e;
 			       test_token e lexbuf }
-  | '\r'? '\n' 
+  | '\r'? '\n'
   | eof        { assert e.in_directive;
 		 e.in_directive <- false;
 		 new_line e;

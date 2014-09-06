@@ -76,12 +76,12 @@ let string_of_loc (pos1, pos2) =
 exception Cppo_error of string
 
 let error loc s =
-  let msg = 
+  let msg =
     sprintf "%s\nError: %s" (string_of_loc loc) s in
   raise (Cppo_error msg)
 
 let warning loc s =
-  let msg = 
+  let msg =
     sprintf "%s\nWarning: %s" (string_of_loc loc) s in
   eprintf "%s\n%!" msg
 

@@ -4,7 +4,7 @@ open Printf
 
 let add_extension tbl s =
   let i =
-    try String.index s ':' 
+    try String.index s ':'
     with Not_found ->
       failwith "Invalid -x argument"
   in
@@ -50,13 +50,13 @@ let () =
 
     "-s", Arg.Set show_exact_locations,
     "
-          Output line directives pointing to the exact source location of 
-          each token, including those coming from the body of macro 
+          Output line directives pointing to the exact source location of
+          each token, including those coming from the body of macro
           definitions.  This behavior is off by default.";
 
     "-n", Arg.Set show_no_locations,
     "
-          Do not output any line directive other than those found in the 
+          Do not output any line directive other than those found in the
           input (overrides -s).";
 
     "-version", Arg.Unit (fun () ->
@@ -94,7 +94,7 @@ Usage: %s [OPTIONS] [FILE1 [FILE2 ...]]
 Options:" Sys.argv.(0) in
   let add_file s = files := s :: !files in
   Arg.parse options add_file msg;
-  
+
   let inputs =
     let preliminaries =
       match List.rev !header with
@@ -102,19 +102,19 @@ Options:" Sys.argv.(0) in
 	| l ->
 	    let s = String.concat "" l in
 	    [ Sys.getcwd (),
-	      "<command line>", 
+	      "<command line>",
 	      (fun () -> Lexing.from_string s),
 	      (fun () -> ()) ]
     in
     let main =
       match List.rev !files with
 	  [] -> [ Sys.getcwd (),
-		  "<stdin>", 
+		  "<stdin>",
 		  (fun () -> Lexing.from_channel stdin),
 		  (fun () -> ()) ]
-	| l -> 
+	| l ->
 	    List.map (
-	      fun file -> 
+	      fun file ->
 		let ic = lazy (open_in file) in
 		Filename.dirname file,
 		file,
