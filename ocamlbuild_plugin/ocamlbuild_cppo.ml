@@ -24,7 +24,7 @@ let dispatcher = function
         if Pathname.is_directory s then [] else [s]) ;
       flag ["cppo"; "cppo_q"] (A "-q") ;
       flag ["cppo"; "cppo_s"] (A "-s") ;
-      flag ["cppo"; "cppo_s"] (A "-n") ;
+      flag ["cppo"; "cppo_n"] (A "-n") ;
       pflag ["cppo"] "cppo_x" (fun s -> S [A "-x"; A s])
     end
   | _ -> ()
