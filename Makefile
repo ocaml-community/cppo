@@ -98,5 +98,6 @@ clean:
 	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
 		cppo \
 		cppo_parser.mli cppo_parser.ml cppo_lexer.ml cppo_version.ml
-	cd examples; $(MAKE) clean
+	$(MAKE) -C examples clean
+	$(MAKE) -C test clean
 	cd ocamlbuild_plugin; ocamlbuild -clean

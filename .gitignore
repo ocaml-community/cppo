@@ -9,6 +9,7 @@
 *.o
 *.a
 *.annot
+*.automaton
 cppo_lexer.ml
 cppo_parser.mli
 cppo_parser.ml

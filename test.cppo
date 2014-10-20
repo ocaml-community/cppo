@@ -13,7 +13,6 @@ f(3)
 "g" is not defined
 #endif
 
-
 #define a(x) b()
 #define b(x) a()
 a()

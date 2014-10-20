@@ -1,4 +1,3 @@
-/* $Id$ */
 %{
   open Printf
   open Cppo_types
@@ -168,18 +167,6 @@ node:
 | IFDEF full_node_list0 elif_list error
                 { error (fst $1) "missing #endif" }
 
-| IF test full_node_list0 ELSE full_node_list0 ENDIF
-                { `Cond ((fst $1, snd $6), $2, $3, $5) }
-
-| IF test full_node_list0 ELSE full_node_list0 error
-                { error $1 "missing #endif" }
-
-| IFDEF full_node_list0 ELSE full_node_list0 ENDIF
-                { `Cond ((fst (fst $1), snd $5), (snd $1), $2, $4) }
-
-| IFDEF full_node_list0 ELSE full_node_list0 error
-                { error (fst $1) "missing #endif" }
-
 | LINE          { `Line $1 }
 ;
 
@@ -189,6 +176,10 @@ elif_list:
                    { let pos1, _ = $1 in
 		     let pos2 = Parsing.rhs_end_pos 4 in
 		     ((pos1, pos2), $2, $3) :: $4 }
+| ELSE full_node_list0
+                   { let pos1, _ = $1 in
+		     let pos2 = Parsing.rhs_end_pos 2 in
+		     [ ((pos1, pos2), `True, $2) ] }
 |                  { [] }
 ;
 
