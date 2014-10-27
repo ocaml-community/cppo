@@ -442,8 +442,3 @@ Options:
   -help  Display this list of options
   --help  Display this list of options
 ```
-
-Author
-------
-
-Martin Jambon <martin@mjambon.com>
