@@ -25,6 +25,9 @@ and arith_expr = (* signed int64 *)
 	(* must be bound to a valid int literal.
 	   Expansion of macro functions is not supported. *)
 
+    | `Tuple of (loc * arith_expr list)
+        (* tuple of 2 or more elements guaranteed by the syntax *)
+
     | `Neg of arith_expr (* - *)
     | `Add of (arith_expr * arith_expr) (* + *)
     | `Sub of (arith_expr * arith_expr) (* - *)

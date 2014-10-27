@@ -59,7 +59,7 @@ let set_lnum lb opt_file lnum =
       pos_bol = cnum;
       pos_cnum = cnum;
       pos_lnum = lnum }
-	
+
 let shift lb n =
   let p = lb.lex_curr_p in
   lb.lex_curr_p <- { p with pos_cnum = p.pos_cnum + n }
@@ -607,7 +607,7 @@ and test_token e = parse
     "true"    { TRUE }
   | "false"   { FALSE }
   | "defined" { DEFINED }
-  | "("       { OP_PAREN }
+  | "("       { OP_PAREN (loc lexbuf) }
   | ")"       { CL_PAREN (loc lexbuf) }
   | "&&"      { AND }
   | "||"      { OR }
@@ -621,7 +621,7 @@ and test_token e = parse
 
   | '-'? ( digit (digit | '_')*
          | ("0x"| "0X") hex (hex | '_')*
-	 | ("0o"| "0O") oct (oct | '_')*	
+	 | ("0o"| "0O") oct (oct | '_')*
 	 | ("0b"| "0B") bin (bin | '_')* )
       { let s = Lexing.lexeme lexbuf in
 	try INT (Int64.of_string s)
@@ -642,6 +642,8 @@ and test_token e = parse
   | "lor"     { LOR }
   | "lxor"    { LXOR }
   | "lnot"    { LNOT }
+
+  | ","       { COMMA (loc lexbuf) }
 
   | ident
       { IDENT (loc lexbuf, lexeme lexbuf) }

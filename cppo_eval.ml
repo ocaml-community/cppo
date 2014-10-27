@@ -152,49 +152,71 @@ let concat loc x y =
     if s = "" then " "
     else " " ^ s ^ " "
 
+
+let rec eval_ident env loc name =
+  let l =
+    try
+      match M.find name env with
+      |	`Def (_, _, l, _) -> l
+      | `Defun _ ->
+          error loc (sprintf "%S expects arguments" name)
+      | `Special -> assert false
+    with Not_found -> error loc (sprintf "Undefined identifier %S" name)
+  in
+  (try
+     match remove_space l with
+       [ `Ident (loc, name, None) ] ->
+         eval_ident env loc name
+     | _ ->
+         let text =
+           List.map (
+             function
+               `Text (_, is_space, s) -> s
+             | _ ->
+                 error loc
+                   (sprintf
+	              "Identifier %S is not bound to a constant"
+               name)
+           ) l
+         in
+	 let s = String.concat "" text in
+         (match int_of_string_with_space s with
+            None ->
+              error loc
+                (sprintf
+                   "Identifier %S is not bound to an int literal"
+                   name)
+          | Some n -> n
+         )
+   with Cppo_error s ->
+     error loc (sprintf "Identifier %S does not expand to an int:\n%s"
+                  name s)
+  )
+
+let rec replace_idents env (x : arith_expr) : arith_expr =
+  match x with
+    | `Ident (loc, name) -> `Int (eval_ident env loc name)
+
+    | `Int x -> `Int x
+    | `Neg x -> `Neg (replace_idents env x)
+    | `Add (a, b) -> `Add (replace_idents env a, replace_idents env b)
+    | `Sub (a, b) -> `Sub (replace_idents env a, replace_idents env b)
+    | `Mul (a, b) -> `Mul (replace_idents env a, replace_idents env b)
+    | `Div (loc, a, b) -> `Div (loc, replace_idents env a, replace_idents env b)
+    | `Mod (loc, a, b) -> `Mod (loc, replace_idents env a, replace_idents env b)
+    | `Lnot a -> `Lnot (replace_idents env a)
+    | `Lsl (a, b) -> `Lsl (replace_idents env a, replace_idents env b)
+    | `Lsr (a, b) -> `Lsr (replace_idents env a, replace_idents env b)
+    | `Asr (a, b) -> `Asr (replace_idents env a, replace_idents env b)
+    | `Land (a, b) -> `Land (replace_idents env a, replace_idents env b)
+    | `Lor (a, b) -> `Lor (replace_idents env a, replace_idents env b)
+    | `Lxor (a, b) -> `Lxor (replace_idents env a, replace_idents env b)
+    | `Tuple (loc, l) -> `Tuple (loc, List.map (replace_idents env) l)
+
 let rec eval_int env (x : arith_expr) : int64 =
   match x with
       `Int x -> x
-    | `Ident (loc, name) ->
-	let l =
-	  try
-	    match M.find name env with
-		`Def (_, _, l, _) -> l
-	      | `Defun _ ->
-		  error loc (sprintf "%S expects arguments" name)
-	      | `Special -> assert false
-	  with Not_found -> error loc (sprintf "Undefined identifier %S" name)
-	in
-	(try
-	   match remove_space l with
-	       [ `Ident (loc, name, None) ] ->
-		 eval_int env (`Ident (loc, name))
-	     | _ ->
-		 let text =
-		   List.map (
-		     function
-			 `Text (_, is_space, s) -> s
-		       | _ ->
-			   error loc
-			     (sprintf
-				"Identifier %S is not bound to a constant"
-				name)
-		   ) l
-		 in
-		 let s = String.concat "" text in
-		 (match int_of_string_with_space s with
-		      None ->
-			error loc
-			  (sprintf
-			     "Identifier %S is not bound to an int literal"
-			     name)
-		    | Some n -> n
-		 )
-	 with Cppo_error s ->
-	   error loc (sprintf "Identifier %S does not expand to an int:\n%s"
-			name s)
-	)
-
+    | `Ident (loc, name) -> eval_ident env loc name
     | `Neg x -> Int64.neg (eval_int env x)
     | `Add (a, b) -> Int64.add (eval_int env a) (eval_int env b)
     | `Sub (a, b) -> Int64.sub (eval_int env a) (eval_int env b)
@@ -244,7 +266,48 @@ let rec eval_int env (x : arith_expr) : int64 =
     | `Land (a, b) -> Int64.logand (eval_int env a) (eval_int env b)
     | `Lor (a, b) -> Int64.logor (eval_int env a) (eval_int env b)
     | `Lxor (a, b) -> Int64.logxor (eval_int env a) (eval_int env b)
-	
+    | `Tuple (loc, l) ->
+        assert (List.length l <> 1);
+        error loc "Operation not supported on tuples"
+
+let rec compare_lists al bl =
+  match al, bl with
+  | a :: al, b :: bl ->
+      let c = Int64.compare a b in
+      if c <> 0 then c
+      else compare_lists al bl
+  | [], [] -> 0
+  | [], _ -> -1
+  | _, [] -> 1
+
+let compare_tuples env (a : arith_expr) (b : arith_expr) =
+  (* We replace the identifiers first to get a better error message
+     on such input:
+
+       #define x (1, 2)
+       #if x >= (1, 2)
+
+     since variables must represent a single int, not a tuple.
+  *)
+  let a = replace_idents env a in
+  let b = replace_idents env b in
+  match a, b with
+  | `Tuple (_, al), `Tuple (_, bl) when List.length al = List.length bl ->
+      let eval_list l = List.map (eval_int env) l in
+      compare_lists (eval_list al) (eval_list bl)
+
+  | `Tuple (loc1, al), `Tuple (loc2, bl) ->
+      error loc2
+        (sprintf "Tuple of length %i cannot be compared to a tuple of length %i"
+           (List.length bl) (List.length al)
+        )
+
+  | `Tuple (loc, _), _
+  | _, `Tuple (loc, _) ->
+      error loc "Tuple cannot be compared to an int"
+
+  | a, b ->
+      Int64.compare (eval_int env a) (eval_int env b)
 
 let rec eval_bool env (x : bool_expr) =
   match x with
@@ -254,9 +317,9 @@ let rec eval_bool env (x : bool_expr) =
     | `Not x -> not (eval_bool env x)
     | `And (a, b) -> eval_bool env a && eval_bool env b
     | `Or (a, b) -> eval_bool env a || eval_bool env b
-    | `Eq (a, b) -> eval_int env a = eval_int env b
-    | `Lt (a, b) -> eval_int env a < eval_int env b
-    | `Gt (a, b) -> eval_int env a > eval_int env b
+    | `Eq (a, b) -> compare_tuples env a b = 0
+    | `Lt (a, b) -> compare_tuples env a b < 0
+    | `Gt (a, b) -> compare_tuples env a b > 0
 
 
 type globals = {

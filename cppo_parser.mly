@@ -15,9 +15,9 @@
 %token < Cppo_types.loc > ENDEF IF ELIF ELSE ENDIF ENDTEST
 
 /* Boolean expressions in #if/#elif directives */
-%token OP_PAREN TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
+%token TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
        PLUS MINUS STAR LNOT LSL LSR ASR LAND LOR LXOR
-%token < Cppo_types.loc > SLASH MOD
+%token < Cppo_types.loc > OP_PAREN SLASH MOD
 %token < int64 > INT
 
 
@@ -220,7 +220,14 @@ bexpr:
 aexpr:
   | INT                      { `Int $1 }
   | IDENT                    { `Ident $1 }
-  | OP_PAREN aexpr CL_PAREN  { $2 }
+  | OP_PAREN aexpr_list CL_PAREN
+                             { match $2 with
+                               | [x] -> x
+                               | l ->
+                                 let pos1, _ = $1 in
+		                 let _, pos2 = $3 in
+		                 `Tuple ((pos1, pos2), l)
+                             }
   | aexpr PLUS aexpr         { `Add ($1, $3) }
   | aexpr MINUS aexpr        { `Sub ($1, $3) }
   | aexpr STAR aexpr         { `Mul ($1, $3) }
@@ -234,4 +241,9 @@ aexpr:
   | aexpr LXOR aexpr         { `Lxor ($1, $3) }
   | LNOT aexpr               { `Lnot $2 }
   | MINUS aexpr %prec UMINUS { `Neg $2 }
+;
+
+aexpr_list:
+  | aexpr COMMA aexpr_list   { $1 :: $3 }
+  | aexpr                    { [$1] }
 ;

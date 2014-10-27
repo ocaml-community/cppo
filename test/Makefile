@@ -1,4 +1,4 @@
-TESTS = ext comments cond
+TESTS = ext comments cond tuple
 .PHONY: all clean $(TESTS)
 
 all: $(TESTS)
@@ -15,6 +15,9 @@ comments:
 
 cond:
 	../cppo cond.cppo > cond.out
+
+tuple:
+	../cppo tuple.cppo > tuple.out
 
 clean:
 	rm -f *~ *.out
