@@ -410,7 +410,7 @@ and ocaml_token e = parse
 
   | '-'? ( digit (digit | '_')*
          | ("0x"| "0X") hex (hex | '_')*
-	 | ("0o"| "0O") oct (oct | '_')*	
+	 | ("0o"| "0O") oct (oct | '_')*
 	 | ("0b"| "0B") bin (bin | '_')* )
 
   | '-'? digit (digit | '_')* ('.' (digit | '_')* )?
@@ -661,6 +661,24 @@ and test_token e = parse
 		   (sprintf "Invalid token %s" (Lexing.lexeme lexbuf)) }
 
 
+(* Parse just an int or a tuple of ints *)
+and int_tuple = parse
+  | space* (([^'(']#space)+ as s) space* eof
+                      { [Int64.of_string s] }
+
+  | space* "("        { int_tuple_content lexbuf }
+
+  | eof | _           { failwith "Not an int nor a tuple" }
+
+and int_tuple_content = parse
+  | space* (([^',' ')']#space)+ as s) space* ","
+                      { let x = Int64.of_string s in
+                        x :: int_tuple_content lexbuf }
+
+  | space* (([^',' ')']#space)+ as s) space* ")" space* eof
+                      { [Int64.of_string s] }
+
+
 {
   let init ~preserve_quotations file lexbuf =
     new_file lexbuf file;
@@ -673,4 +691,8 @@ and test_token e = parse
       token_start = Lexing.dummy_pos;
       lexbuf = lexbuf;
     }
+
+  let int_tuple_of_string s =
+    try Some (int_tuple (Lexing.from_string s))
+    with _ -> None
 }

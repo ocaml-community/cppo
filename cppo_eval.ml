@@ -53,44 +53,6 @@ let rec add_sep sep last = function
   | x :: l -> x :: sep :: add_sep sep last l
 
 
-let trim s =
-  let len = String.length s in
-  let is_space = function ' ' | '\t' | '\n' | '\r' -> true | _ -> false in
-  let first =
-    let x = ref len in
-    (try
-       for i = 0 to len - 1 do
-	 if not (is_space s.[i]) then (
-	   x := i;
-	   raise Exit
-	 )
-       done
-     with Exit -> ()
-    );
-    !x
-  in
-  let last =
-    let x = ref (-1) in
-    (try
-       for i = len - 1 downto 0 do
-	 if not (is_space s.[i]) then (
-	   x := i;
-	   raise Exit
-	 )
-       done
-     with Exit -> ()
-    );
-    !x
-  in
-  if first <= last then
-    String.sub s first (last - first + 1)
-  else
-    ""
-
-let int_of_string_with_space s =
-  try Some (Int64.of_string (trim s))
-  with _ -> None
-
 let remove_space l =
   List.filter (function `Text (_, true, _) -> false | _ -> true) l
 
@@ -152,7 +114,26 @@ let concat loc x y =
     if s = "" then " "
     else " " ^ s ^ " "
 
+(*
+   Expand the contents of a variable used in a boolean expression.
 
+   Ideally, we should first completely expand the contents bound
+   to the variable, and then parse the result as an int or an int tuple.
+   This is a bit complicated to do well, and we don't want to implement
+   a full programming language here either.
+
+   Instead we only accept int literals, int tuple literals, and variables that
+   themselves expand into one those.
+
+   In particular:
+   - We do not support arithmetic operations
+   - We do not support tuples containing variables such as (x, y)
+
+   Example of contents that we support:
+   - 123
+   - (1, 2, 3)
+   - x, where x expands into 123.
+*)
 let rec eval_ident env loc name =
   let l =
     try
@@ -163,39 +144,43 @@ let rec eval_ident env loc name =
       | `Special -> assert false
     with Not_found -> error loc (sprintf "Undefined identifier %S" name)
   in
+  let expansion_error () =
+    error loc
+      (sprintf "\
+Variable %s found in cppo boolean expression must expand
+into an int literal, into a tuple of int literals,
+or into a variable with the same properties."
+         name)
+  in
   (try
      match remove_space l with
        [ `Ident (loc, name, None) ] ->
+         (* single identifier that we expand recursively *)
          eval_ident env loc name
      | _ ->
+         (* int literal or int tuple literal; variables not allowed *)
          let text =
            List.map (
              function
                `Text (_, is_space, s) -> s
              | _ ->
-                 error loc
-                   (sprintf
-	              "Identifier %S is not bound to a constant"
-               name)
+                 expansion_error ()
            ) l
          in
 	 let s = String.concat "" text in
-         (match int_of_string_with_space s with
-            None ->
-              error loc
-                (sprintf
-                   "Identifier %S is not bound to an int literal"
-                   name)
-          | Some n -> n
+         (match Cppo_lexer.int_tuple_of_string s with
+            Some [i] -> `Int i
+          | Some l -> `Tuple (loc, List.map (fun i -> `Int i) l)
+          | None ->
+              expansion_error ()
          )
    with Cppo_error s ->
-     error loc (sprintf "Identifier %S does not expand to an int:\n%s"
-                  name s)
+     expansion_error ()
   )
 
 let rec replace_idents env (x : arith_expr) : arith_expr =
   match x with
-    | `Ident (loc, name) -> `Int (eval_ident env loc name)
+    | `Ident (loc, name) -> eval_ident env loc name
 
     | `Int x -> `Int x
     | `Neg x -> `Neg (replace_idents env x)
@@ -215,8 +200,9 @@ let rec replace_idents env (x : arith_expr) : arith_expr =
 
 let rec eval_int env (x : arith_expr) : int64 =
   match x with
-      `Int x -> x
-    | `Ident (loc, name) -> eval_ident env loc name
+    | `Ident (loc, name) -> eval_int env (eval_ident env loc name)
+
+    | `Int x -> x
     | `Neg x -> Int64.neg (eval_int env x)
     | `Add (a, b) -> Int64.add (eval_int env a) (eval_int env b)
     | `Sub (a, b) -> Int64.sub (eval_int env a) (eval_int env b)

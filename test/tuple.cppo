@@ -28,8 +28,9 @@
   bees
 #endif
 
-#define pair (0, -5, 99)
-#if (0, -5, 99) = pair
+#define tuple (0, -5, 3)
+#define tuple2 tuple
+#if (0, -5, x) > tuple2
   steamboat
 #else
   koalas
