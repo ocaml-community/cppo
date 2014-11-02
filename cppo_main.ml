@@ -38,6 +38,21 @@ let () =
     "DIR
           Add directory DIR to the search path for included files";
 
+    "-V", Arg.String (fun s -> header := parse_definitions s :: !header),
+    "VAR:MAJOR.MINOR.PATCH-OPTPRERELEASE+OPTBUILD
+          Define the following variables extracted from a version string
+          (following the Semantic Versioning syntax http://semver.org/):
+
+            VAR_MAJOR           must be a non-negative int
+            VAR_MINOR           must be a non-negative int
+            VAR_PATCH           must be a non-negative int
+            VAR_VERSION         is the tuple (MAJOR, MINOR, PATCH)
+            VAR_OPTPRERELEASE   if the OPTPRERELEASE part exists
+            VAR_OPTBUILD        if the OPTBUILD part exists
+
+          Example: cppo -V OCAML:4.02.1
+";
+
     "-o", Arg.String (fun s -> out_file := Some s),
     "FILE
           Output file";
