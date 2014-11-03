@@ -14,7 +14,62 @@ let add_extension tbl s =
   else
     Hashtbl.add tbl id cmd_tpl
 
-let () =
+let semver_re = Str.regexp "\
+\\([0-9]+\\)\
+\\.\\([0-9]+\\)\
+\\.\\([0-9]+\\)\
+\\(-\\([^+]*\\)\\)?\
+\\(\\+\\(.*\\)\\)?\
+$"
+
+let parse_semver s =
+  if not (Str.string_match semver_re s 0) then
+    None
+  else
+    let major = Str.matched_group 1 s in
+    let minor = Str.matched_group 2 s in
+    let patch = Str.matched_group 3 s in
+    let prerelease = try Some (Str.matched_group 5 s) with Not_found -> None in
+    let build = try Some (Str.matched_group 7 s) with Not_found -> None in
+    Some (major, minor, patch, prerelease, build)
+
+let define var s =
+  [sprintf "#define %s %s\n" var s]
+
+let opt_define var o =
+  match o with
+  | None -> []
+  | Some s -> define var s
+
+let parse_version_spec s =
+  let error () =
+    failwith (sprintf "Invalid version specification: %s" s)
+  in
+  let prefix, version_full =
+    try
+      let len = String.index s ':' in
+      String.sub s 0 len, String.sub s (len+1) (String.length s - (len+1))
+    with Not_found ->
+      error ()
+  in
+  match parse_semver version_full with
+  | None ->
+      error ()
+  | Some (major, minor, patch, opt_prerelease, opt_build) ->
+      let version = sprintf "(%s, %s, %s)" major minor patch in
+      let version_string = sprintf "%s.%s.%s" major minor patch in
+      List.flatten [
+        define (prefix ^ "_MAJOR") major;
+        define (prefix ^ "_MINOR") minor;
+        define (prefix ^ "_PATCH") patch;
+        opt_define (prefix ^ "_PRERELEASE") opt_prerelease;
+        opt_define (prefix ^ "_BUILD") opt_build;
+        define (prefix ^ "_VERSION") version;
+        define (prefix ^ "_VERSION_STRING") version_string;
+        define (prefix ^ "_VERSION_FULL") s;
+      ]
+
+let main () =
   let extensions = Hashtbl.create 10 in
   let files = ref [] in
   let header = ref [] in
@@ -38,7 +93,7 @@ let () =
     "DIR
           Add directory DIR to the search path for included files";
 
-    "-V", Arg.String (fun s -> header := parse_definitions s :: !header),
+    "-V", Arg.String (fun s -> header := parse_version_spec s @ !header),
     "VAR:MAJOR.MINOR.PATCH-OPTPRERELEASE+OPTBUILD
           Define the following variables extracted from a version string
           (following the Semantic Versioning syntax http://semver.org/):
@@ -46,9 +101,11 @@ let () =
             VAR_MAJOR           must be a non-negative int
             VAR_MINOR           must be a non-negative int
             VAR_PATCH           must be a non-negative int
+            VAR_PRERELEASE      if the OPTPRERELEASE part exists
+            VAR_BUILD           if the OPTBUILD part exists
             VAR_VERSION         is the tuple (MAJOR, MINOR, PATCH)
-            VAR_OPTPRERELEASE   if the OPTPRERELEASE part exists
-            VAR_OPTBUILD        if the OPTBUILD part exists
+            VAR_VERSION_STRING  is the string MAJOR.MINOR.PATCH
+            VAR_VERSION_FULL    is the original string
 
           Example: cppo -V OCAML:4.02.1
 ";
@@ -141,17 +198,13 @@ Options:" Sys.argv.(0) in
   let env = Cppo_eval.builtin_env in
   let buf = Buffer.create 10_000 in
   let _env =
-    try Cppo_eval.include_inputs
+    Cppo_eval.include_inputs
       ~extensions
       ~preserve_quotations: !preserve_quotations
       ~incdirs: (List.rev !incdirs)
       ~show_exact_locations: !show_exact_locations
       ~show_no_locations: !show_no_locations
       buf env inputs
-    with Cppo_types.Cppo_error msg
-      | Failure msg ->
-          eprintf "Error: %s\n%!" msg;
-          exit 1
   in
   match !out_file with
       None ->
@@ -161,3 +214,13 @@ Options:" Sys.argv.(0) in
 	let oc = open_out file in
 	output_string oc (Buffer.contents buf);
 	close_out oc
+
+let () =
+  if not !Sys.interactive then
+    try
+      main ()
+    with
+    | Cppo_types.Cppo_error msg
+    | Failure msg ->
+        eprintf "Error: %s\n%!" msg;
+        exit 1

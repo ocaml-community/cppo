@@ -44,7 +44,7 @@ OCAMLBUILD_INSTALL = ocamlbuild_plugin/_build/ocamlbuild_cppo.cmi \
                      $(addprefix ocamlbuild_plugin/_build/,$(OCAMLBUILD_IMPL))
 
 
-.PHONY: default all opt install clean test
+.PHONY: default all opt toplib install clean test
 
 default: opt ocamlbuild
 
@@ -57,10 +57,14 @@ ML = cppo_version.ml cppo_types.ml \
 OCAMLBUILD_ML = ocamlbuild_cppo.ml
 
 all: $(ML)
-	ocamlc -o cppo$(EXE) -dtypes unix.cma $(ML)
+	ocamlc -o cppo$(EXE) -dtypes unix.cma str.cma $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo$(EXE) -dtypes unix.cmxa $(ML)
+	ocamlopt -o cppo$(EXE) -dtypes unix.cmxa str.cmxa $(ML)
+
+# For debugging; not installed.
+toplib: $(ML)
+	ocamlc -a -o cppo.cma -dtypes unix.cma str.cma $(ML)
 
 ocamlbuild:
 	cd ocamlbuild_plugin && ocamlbuild -use-ocamlfind $(OCAMLBUILD_IMPL)

@@ -1,4 +1,4 @@
-TESTS = ext comments cond tuple
+TESTS = ext comments cond tuple version
 .PHONY: all clean $(TESTS)
 
 all: $(TESTS)
@@ -18,6 +18,9 @@ cond:
 
 tuple:
 	../cppo tuple.cppo > tuple.out
+
+version:
+	../cppo -V X:123.05.2-alpha.1+foo-2.1 version.cppo > version.out
 
 clean:
 	rm -f *~ *.out
