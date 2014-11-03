@@ -16,14 +16,14 @@ type bool_expr =
     | `Eq of (arith_expr * arith_expr) (* = *)
     | `Lt of (arith_expr * arith_expr) (* < *)
     | `Gt of (arith_expr * arith_expr) (* > *)
-	(* syntax for additional operators: <>, <=, >= *)
+        (* syntax for additional operators: <>, <=, >= *)
     ]
 
 and arith_expr = (* signed int64 *)
     [ `Int of int64
     | `Ident of (loc * string)
-	(* must be bound to a valid int literal.
-	   Expansion of macro functions is not supported. *)
+        (* must be bound to a valid int literal.
+           Expansion of macro functions is not supported. *)
 
     | `Tuple of (loc * arith_expr list)
         (* tuple of 2 or more elements guaranteed by the syntax *)

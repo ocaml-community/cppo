@@ -20,7 +20,7 @@ soit rec separation x = fonction
       sinon l1, (y :: l2)
   | [] ->
       [], []
-	
+
 soit rec tri = fonction
     x :: l ->
       soit l1, l2 = separation x l dans

@@ -38,12 +38,12 @@ let line_directive buf prev_file pos =
     Buffer.add_char buf '\n';
   (match prev_file with
        Some s when s = file ->
-	 bprintf buf "# %i\n"
-	   pos.Lexing.pos_lnum
+         bprintf buf "# %i\n"
+           pos.Lexing.pos_lnum
      | _ ->
-	 bprintf buf "# %i %S\n"
-	   pos.Lexing.pos_lnum
-	   pos.Lexing.pos_fname
+         bprintf buf "# %i %S\n"
+           pos.Lexing.pos_lnum
+           pos.Lexing.pos_fname
   );
   bprintf buf "%s" (String.make (pos.Lexing.pos_cnum - pos.Lexing.pos_bol) ' ')
 
@@ -138,7 +138,7 @@ let rec eval_ident env loc name =
   let l =
     try
       match M.find name env with
-      |	`Def (_, _, l, _) -> l
+      | `Def (_, _, l, _) -> l
       | `Defun _ ->
           error loc (sprintf "%S expects arguments" name)
       | `Special -> assert false
@@ -167,7 +167,7 @@ or into a variable with the same properties."
                  expansion_error ()
            ) l
          in
-	 let s = String.concat "" text in
+         let s = String.concat "" text in
          (match Cppo_lexer.int_tuple_of_string s with
             Some [i] -> `Int i
           | Some l -> `Tuple (loc, List.map (fun i -> `Int i) l)
@@ -208,46 +208,46 @@ let rec eval_int env (x : arith_expr) : int64 =
     | `Sub (a, b) -> Int64.sub (eval_int env a) (eval_int env b)
     | `Mul (a, b) -> Int64.mul (eval_int env a) (eval_int env b)
     | `Div (loc, a, b) ->
-	(try Int64.div (eval_int env a) (eval_int env b)
-	 with Division_by_zero ->
-	   error loc "Division by zero")
+        (try Int64.div (eval_int env a) (eval_int env b)
+         with Division_by_zero ->
+           error loc "Division by zero")
 
     | `Mod (loc, a, b) ->
-	(try Int64.rem (eval_int env a) (eval_int env b)
-	 with Division_by_zero ->
-	   error loc "Division by zero")
+        (try Int64.rem (eval_int env a) (eval_int env b)
+         with Division_by_zero ->
+           error loc "Division by zero")
 
     | `Lnot a -> Int64.lognot (eval_int env a)
 
     | `Lsl (a, b) ->
-	let n = eval_int env a in
-	let shift = eval_int env b in
-	let shift =
-	  if shift >= 64L then 64L
-	  else if shift <= -64L then -64L
-	  else shift
-	in
-	Int64.shift_left n (Int64.to_int shift)
+        let n = eval_int env a in
+        let shift = eval_int env b in
+        let shift =
+          if shift >= 64L then 64L
+          else if shift <= -64L then -64L
+          else shift
+        in
+        Int64.shift_left n (Int64.to_int shift)
 
     | `Lsr (a, b) ->
-	let n = eval_int env a in
-	let shift = eval_int env b in
-	let shift =
-	  if shift >= 64L then 64L
-	  else if shift <= -64L then -64L
-	  else shift
-	in
-	Int64.shift_right_logical n (Int64.to_int shift)
+        let n = eval_int env a in
+        let shift = eval_int env b in
+        let shift =
+          if shift >= 64L then 64L
+          else if shift <= -64L then -64L
+          else shift
+        in
+        Int64.shift_right_logical n (Int64.to_int shift)
 
     | `Asr (a, b) ->
-	let n = eval_int env a in
-	let shift = eval_int env b in
-	let shift =
-	  if shift >= 64L then 64L
-	  else if shift <= -64L then -64L
-	  else shift
-	in
-	Int64.shift_right n (Int64.to_int shift)
+        let n = eval_int env a in
+        let shift = eval_int env b in
+        let shift =
+          if shift >= 64L then 64L
+          else if shift <= -64L then -64L
+          else shift
+        in
+        Int64.shift_right n (Int64.to_int shift)
 
     | `Land (a, b) -> Int64.logand (eval_int env a) (eval_int env b)
     | `Lor (a, b) -> Int64.logor (eval_int env a) (eval_int env b)
@@ -354,11 +354,11 @@ let parse ~preserve_quotations file lexbuf =
     Cppo_parser.main (Cppo_lexer.line lexer_env) lexbuf
   with
       Parsing.Parse_error ->
-	error (Cppo_lexer.loc lexbuf) "syntax error"
+        error (Cppo_lexer.loc lexbuf) "syntax error"
     | Cppo_types.Cppo_error _ as e ->
-	raise e
+        raise e
     | e ->
-	error (Cppo_lexer.loc lexbuf) (Printexc.to_string e)
+        error (Cppo_lexer.loc lexbuf) (Printexc.to_string e)
 
 let plural n =
   if abs n <= 1 then ""
@@ -408,24 +408,24 @@ let rec include_file g loc rel_file env =
   let file =
     if not (Filename.is_relative rel_file) then
       if Sys.file_exists rel_file then
-	rel_file
+        rel_file
       else
-	error loc (sprintf "Included file %S does not exist" rel_file)
+        error loc (sprintf "Included file %S does not exist" rel_file)
     else
       try
-	let dir =
-	  List.find (
-	    fun dir ->
-	      let file = Filename.concat dir rel_file in
-	      Sys.file_exists file
-	  ) (g.current_directory :: g.incdirs)
-	in
-	if dir = Filename.current_dir_name then
-	  rel_file
-	else
-	  Filename.concat dir rel_file
+        let dir =
+          List.find (
+            fun dir ->
+              let file = Filename.concat dir rel_file in
+              Sys.file_exists file
+          ) (g.current_directory :: g.incdirs)
+        in
+        if dir = Filename.current_dir_name then
+          rel_file
+        else
+          Filename.concat dir rel_file
       with Not_found ->
-	error loc (sprintf "Cannot find included file %S" rel_file)
+        error loc (sprintf "Cannot find included file %S" rel_file)
   in
   if S.mem file g.included then
     failwith (sprintf "Cyclic inclusion of file %S" file)
@@ -435,9 +435,9 @@ let rec include_file g loc rel_file env =
     let l = parse ~preserve_quotations:g.g_preserve_quotations file lexbuf in
     close_in ic;
     expand_list { g with
-		    included = S.add file g.included;
-		    current_directory = Filename.dirname file
-		} env l
+                    included = S.add file g.included;
+                    current_directory = Filename.dirname file
+                } env l
 
 and expand_list ?(top = false) g env l =
   List.fold_left (expand_node ~top g) env l
@@ -446,157 +446,157 @@ and expand_node ?(top = false) g env0 x =
   match x with
       `Ident (loc, name, opt_args) ->
 
-	let def =
-	  try Some (M.find name env0)
-	  with Not_found -> None
-	in
-	let g =
-	  if top && def <> None then
-	    { g with call_loc = loc }
-	  else g
-	in
+        let def =
+          try Some (M.find name env0)
+          with Not_found -> None
+        in
+        let g =
+          if top && def <> None then
+            { g with call_loc = loc }
+          else g
+        in
 
-	let enable_loc0 = !(g.enable_loc) in
+        let enable_loc0 = !(g.enable_loc) in
 
-	if def <> None then (
-	  g.require_location := true;
+        if def <> None then (
+          g.require_location := true;
 
-	  if not g.show_exact_locations then (
-	    (* error reports will point more or less to the point
-	       where the code is included rather than the source location
-	       of the macro definition *)
-	    maybe_print_location g (fst loc);
-	    g.enable_loc := false
-	  )
-	);
+          if not g.show_exact_locations then (
+            (* error reports will point more or less to the point
+               where the code is included rather than the source location
+               of the macro definition *)
+            maybe_print_location g (fst loc);
+            g.enable_loc := false
+          )
+        );
 
-	let env =
-	  match def, opt_args with
-	      None, None ->
-		expand_node g env0 (`Text (loc, false, name))
-	    | None, Some args ->
-		let with_sep =
-		  add_sep
-		    [`Text (loc, false, ",")]
-		    [`Text (loc, false, ")")]
-		    args in
-		let l =
-		  `Text (loc, false, name ^ "(") :: List.flatten with_sep in
-		expand_list g env0 l
-		
-	    | Some (`Defun (_, _, arg_names, _, _)), None ->
-		error loc
-		  (sprintf "%S expects %i arguments but is applied to none."
-		     name (List.length arg_names))
-		
-	    | Some (`Def _), Some l ->
-		error loc
-		  (sprintf "%S expects no arguments" name)
-		
-	    | Some (`Def (_, _, l, env)), None ->
-		ignore (expand_list g env l);
-		env0
-		
-	    | Some (`Defun (_, _, arg_names, l, env)), Some args ->
-		let argc = List.length arg_names in
-		let n = List.length args in
-		let args =
-		  (* it's ok to pass an empty arg if one arg
-		     is expected *)
-		  if n = 0 && argc = 1 then [[]]
-		  else args
-		in
-		if argc <> n then
-		  error loc
-		    (sprintf "%S expects %i argument%s but is applied to \
+        let env =
+          match def, opt_args with
+              None, None ->
+                expand_node g env0 (`Text (loc, false, name))
+            | None, Some args ->
+                let with_sep =
+                  add_sep
+                    [`Text (loc, false, ",")]
+                    [`Text (loc, false, ")")]
+                    args in
+                let l =
+                  `Text (loc, false, name ^ "(") :: List.flatten with_sep in
+                expand_list g env0 l
+
+            | Some (`Defun (_, _, arg_names, _, _)), None ->
+                error loc
+                  (sprintf "%S expects %i arguments but is applied to none."
+                     name (List.length arg_names))
+
+            | Some (`Def _), Some l ->
+                error loc
+                  (sprintf "%S expects no arguments" name)
+
+            | Some (`Def (_, _, l, env)), None ->
+                ignore (expand_list g env l);
+                env0
+
+            | Some (`Defun (_, _, arg_names, l, env)), Some args ->
+                let argc = List.length arg_names in
+                let n = List.length args in
+                let args =
+                  (* it's ok to pass an empty arg if one arg
+                     is expected *)
+                  if n = 0 && argc = 1 then [[]]
+                  else args
+                in
+                if argc <> n then
+                  error loc
+                    (sprintf "%S expects %i argument%s but is applied to \
                               %i argument%s."
-		       name argc (plural argc) n (plural n))
-		else
-		  let app_env =
-		    List.fold_left2 (
-		      fun env name l ->
-			M.add name (`Def (loc, name, l, env0)) env
-		    ) env arg_names args
-		  in
-		  ignore (expand_list g app_env l);
-		  env0
-		
-	    | Some `Special, _ -> assert false
-	in
+                       name argc (plural argc) n (plural n))
+                else
+                  let app_env =
+                    List.fold_left2 (
+                      fun env name l ->
+                        M.add name (`Def (loc, name, l, env0)) env
+                    ) env arg_names args
+                  in
+                  ignore (expand_list g app_env l);
+                  env0
 
-	if def = None then
-	  g.require_location := false
-	else
-	  g.require_location := true;
+            | Some `Special, _ -> assert false
+        in
 
-	(* restore initial setting *)
-	g.enable_loc := enable_loc0;
+        if def = None then
+          g.require_location := false
+        else
+          g.require_location := true;
 
-	env
+        (* restore initial setting *)
+        g.enable_loc := enable_loc0;
+
+        env
 
 
     | `Def (loc, name, body)->
-	g.require_location := true;
-	if M.mem name env0 then
-	  error loc (sprintf "%S is already defined" name)
-	else
-	  M.add name (`Def (loc, name, body, env0)) env0
+        g.require_location := true;
+        if M.mem name env0 then
+          error loc (sprintf "%S is already defined" name)
+        else
+          M.add name (`Def (loc, name, body, env0)) env0
 
     | `Defun (loc, name, arg_names, body) ->
-	g.require_location := true;
-	if M.mem name env0 then
-	  error loc (sprintf "%S is already defined" name)
-	else	
-	  M.add name (`Defun (loc, name, arg_names, body, env0)) env0
+        g.require_location := true;
+        if M.mem name env0 then
+          error loc (sprintf "%S is already defined" name)
+        else
+          M.add name (`Defun (loc, name, arg_names, body, env0)) env0
 
     | `Undef (loc, name) ->
-	g.require_location := true;
-	if is_reserved name then
-	  error loc
-	    (sprintf "%S is a built-in variable that cannot be undefined" name)
-	else
-	  M.remove name env0
+        g.require_location := true;
+        if is_reserved name then
+          error loc
+            (sprintf "%S is a built-in variable that cannot be undefined" name)
+        else
+          M.remove name env0
 
     | `Include (loc, file) ->
-	g.require_location := true;
-	let env = include_file g loc file env0 in
-	g.require_location := true;
-	env
+        g.require_location := true;
+        let env = include_file g loc file env0 in
+        g.require_location := true;
+        env
 
     | `Ext (loc, id, data) ->
         g.require_location := true;
         expand_ext g loc id data;
         g.require_location := true;
         g.last_file_loc := None;
-	env0
+        env0
 
     | `Cond (loc, test, if_true, if_false) ->
-	let l =
-	  if eval_bool env0 test then if_true
-	  else if_false
-	in
-	g.require_location := true;
-	let env = expand_list g env0 l in
-	g.require_location := true;
-	env
+        let l =
+          if eval_bool env0 test then if_true
+          else if_false
+        in
+        g.require_location := true;
+        let env = expand_list g env0 l in
+        g.require_location := true;
+        env
 
     | `Error (loc, msg) ->
-	error loc msg
+        error loc msg
 
     | `Warning (loc, msg) ->
-	warning loc msg;
-	env0
+        warning loc msg;
+        env0
 
     | `Text (loc, is_space, s) ->
-	if not is_space then (
-	  maybe_print_location g (fst loc);
-	  g.require_location := false
-	);
-	Buffer.add_string g.buf s;
-	env0
+        if not is_space then (
+          maybe_print_location g (fst loc);
+          g.require_location := false
+        );
+        Buffer.add_string g.buf s;
+        env0
 
     | `Seq l ->
-	expand_list g env0 l
+        expand_list g env0 l
 
     | `Stringify x ->
         let enable_loc0 = !(g.enable_loc) in
@@ -628,33 +628,33 @@ and expand_node ?(top = false) g env0 x =
         env0
 
     | `Line (loc, opt_file, n) ->
-	(* printing a line directive is not strictly needed *)
-	(match opt_file with
-	     None ->
-	       maybe_print_location g (fst loc);
-	       bprintf g.buf "\n# %i\n" n
-	   | Some file ->
-	       bprintf g.buf "\n# %i %S\n" n file
-	);
-	(* printing the location next time is needed because it just changed *)
-	g.require_location := true;
-	env0
+        (* printing a line directive is not strictly needed *)
+        (match opt_file with
+             None ->
+               maybe_print_location g (fst loc);
+               bprintf g.buf "\n# %i\n" n
+           | Some file ->
+               bprintf g.buf "\n# %i %S\n" n file
+        );
+        (* printing the location next time is needed because it just changed *)
+        g.require_location := true;
+        env0
 
     | `Current_line loc ->
-	maybe_print_location g (fst loc);
-	g.require_location := true;
-	let pos, _ = g.call_loc in
-	bprintf g.buf " %i " pos.Lexing.pos_lnum;
-	env0
+        maybe_print_location g (fst loc);
+        g.require_location := true;
+        let pos, _ = g.call_loc in
+        bprintf g.buf " %i " pos.Lexing.pos_lnum;
+        env0
 
     | `Current_file loc ->
-	maybe_print_location g (fst loc);
-	g.require_location := true;
-	let pos, _ = g.call_loc in
-	bprintf g.buf " %S " pos.Lexing.pos_fname;
-	env0
+        maybe_print_location g (fst loc);
+        g.require_location := true;
+        let pos, _ = g.call_loc in
+        bprintf g.buf " %S " pos.Lexing.pos_fname;
+        env0
 
-	
+
 
 
 let include_inputs
@@ -671,16 +671,16 @@ let include_inputs
       let l = parse ~preserve_quotations file (open_ ()) in
       close ();
       let g = {
-	call_loc = dummy_loc;
+        call_loc = dummy_loc;
         buf = buf;
-	included = S.empty;
-	require_location = ref true;
-	last_file_loc = ref None;
-	show_exact_locations = show_exact_locations;
-	enable_loc = ref enable_loc;
-	g_preserve_quotations = preserve_quotations;
-	incdirs = incdirs;
-	current_directory = dir;
+        included = S.empty;
+        require_location = ref true;
+        last_file_loc = ref None;
+        show_exact_locations = show_exact_locations;
+        enable_loc = ref enable_loc;
+        g_preserve_quotations = preserve_quotations;
+        incdirs = incdirs;
+        current_directory = dir;
         extensions = extensions;
       }
       in

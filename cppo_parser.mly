@@ -71,17 +71,17 @@ node:
   TEXT          { `Text $1 }
 
 | IDENT         { let loc, name = $1 in
-		  `Ident (loc, name, None) }
+                  `Ident (loc, name, None) }
 
 | FUNIDENT args1 CL_PAREN
                 {
                 (* macro application that receives at least one argument,
                    possibly empty.  We cannot distinguish syntactically between
-		   zero argument and one empty argument.
+                   zero argument and one empty argument.
                 *)
-		  let (pos1, _), name = $1 in
-		  let _, pos2 = $3 in
-		  `Ident ((pos1, pos2), name, Some $2) }
+                  let (pos1, _), name = $1 in
+                  let _, pos2 = $3 in
+                  `Ident ((pos1, pos2), name, Some $2) }
 | FUNIDENT error
                 { error (fst $1) "Invalid macro application" }
 
@@ -91,32 +91,32 @@ node:
 | DEF full_node_list0 ENDEF
                 { let (pos1, _), name = $1 in
 
-		  (* Additional spacing is needed for cases like '+foo+'
-		     expanding into '++' instead of '+ +'. *)
-		  let safe_space = `Text ($3, true, " ") in
+                  (* Additional spacing is needed for cases like '+foo+'
+                     expanding into '++' instead of '+ +'. *)
+                  let safe_space = `Text ($3, true, " ") in
 
-		  let body = $2 @ [safe_space] in
-		  let _, pos2 = $3 in
-		  `Def ((pos1, pos2), name, body) }
+                  let body = $2 @ [safe_space] in
+                  let _, pos2 = $3 in
+                  `Def ((pos1, pos2), name, body) }
 
 | DEFUN def_args1 CL_PAREN full_node_list0 ENDEF
                 { let (pos1, _), name = $1 in
-		  let args = $2 in
+                  let args = $2 in
 
-		  (* Additional spacing is needed for cases like 'foo()bar'
-		     where 'foo()' expands into 'abc', giving 'abcbar'
-		     instead of 'abc bar';
-		     Also needed for '+foo()+' expanding into '++' instead
-		     of '+ +'. *)
-		  let safe_space = `Text ($5, true, " ") in
+                  (* Additional spacing is needed for cases like 'foo()bar'
+                     where 'foo()' expands into 'abc', giving 'abcbar'
+                     instead of 'abc bar';
+                     Also needed for '+foo()+' expanding into '++' instead
+                     of '+ +'. *)
+                  let safe_space = `Text ($5, true, " ") in
 
-		  let body = $4 @ [safe_space] in
-		  let _, pos2 = $5 in
-		  `Defun ((pos1, pos2), name, args, body) }
+                  let body = $4 @ [safe_space] in
+                  let _, pos2 = $5 in
+                  `Defun ((pos1, pos2), name, args, body) }
 
 | DEFUN CL_PAREN
                 { error (fst (fst $1), snd $2)
-		    "At least one argument is required" }
+                    "At least one argument is required" }
 
 | UNDEF
                 { `Undef $1 }
@@ -133,36 +133,36 @@ node:
 
 | IF test full_node_list0 elif_list ENDIF
                 { let pos1, _ = $1 in
-		  let _, pos2 = $5 in
-		  let loc = (pos1, pos2) in
-		  let test = $2 in
-		  let if_true = $3 in
-		  let if_false =
-		    List.fold_right (
-		      fun (loc, test, if_true) if_false ->
-			[`Cond (loc, test, if_true, if_false) ]
-		    ) $4 []
-		  in
-		  `Cond (loc, test, if_true, if_false)
-		}
+                  let _, pos2 = $5 in
+                  let loc = (pos1, pos2) in
+                  let test = $2 in
+                  let if_true = $3 in
+                  let if_false =
+                    List.fold_right (
+                      fun (loc, test, if_true) if_false ->
+                        [`Cond (loc, test, if_true, if_false) ]
+                    ) $4 []
+                  in
+                  `Cond (loc, test, if_true, if_false)
+                }
 
 | IF test full_node_list0 elif_list error
                 { (* BUG? ocamlyacc fails to reduce that rule but not menhir *)
-		  error $1 "missing #endif" }
+                  error $1 "missing #endif" }
 
 | IFDEF full_node_list0 elif_list ENDIF
                 { let (pos1, _), test = $1 in
-		  let _, pos2 = $4 in
-		  let loc = (pos1, pos2) in
-		  let if_true = $2 in
-		  let if_false =
-		    List.fold_right (
-		      fun (loc, test, if_true) if_false ->
-			[`Cond (loc, test, if_true, if_false) ]
-		    ) $3 []
-		  in
-		  `Cond (loc, test, if_true, if_false)
-		}
+                  let _, pos2 = $4 in
+                  let loc = (pos1, pos2) in
+                  let if_true = $2 in
+                  let if_false =
+                    List.fold_right (
+                      fun (loc, test, if_true) if_false ->
+                        [`Cond (loc, test, if_true, if_false) ]
+                    ) $3 []
+                  in
+                  `Cond (loc, test, if_true, if_false)
+                }
 
 | IFDEF full_node_list0 elif_list error
                 { error (fst $1) "missing #endif" }
@@ -174,12 +174,12 @@ node:
 elif_list:
   ELIF test full_node_list0 elif_list
                    { let pos1, _ = $1 in
-		     let pos2 = Parsing.rhs_end_pos 4 in
-		     ((pos1, pos2), $2, $3) :: $4 }
+                     let pos2 = Parsing.rhs_end_pos 4 in
+                     ((pos1, pos2), $2, $3) :: $4 }
 | ELSE full_node_list0
                    { let pos1, _ = $1 in
-		     let pos2 = Parsing.rhs_end_pos 2 in
-		     [ ((pos1, pos2), `True, $2) ] }
+                     let pos2 = Parsing.rhs_end_pos 2 in
+                     [ ((pos1, pos2), `True, $2) ] }
 |                  { [] }
 ;
 
@@ -225,8 +225,8 @@ aexpr:
                                | [x] -> x
                                | l ->
                                  let pos1, _ = $1 in
-		                 let _, pos2 = $3 in
-		                 `Tuple ((pos1, pos2), l)
+                                 let _, pos2 = $3 in
+                                 `Tuple ((pos1, pos2), l)
                              }
   | aexpr PLUS aexpr         { `Add ($1, $3) }
   | aexpr MINUS aexpr        { `Sub ($1, $3) }
