@@ -191,7 +191,7 @@ Arithmetic operators over signed 64-bit ints:
 * `lnot` ...
 
 Macro identifiers can be used in place of ints as long as they expand
-to an int literal, e.g.:
+to an int literal or a tuple of int literals, e.g.:
 
 ```ocaml
 #define one 1
@@ -199,12 +199,36 @@ to an int literal, e.g.:
 #if one + one <> 2
 #error "Something's wrong."
 #endif
+
+#define VERSION (1, 0, 5)
+#if VERSION <= (1, 0, 2)
+#error "Version 1.0.2 or greater is required."
+#endif
+```
+
+Version strings (http://semver.org/) can also be passed to cppo on the
+command line. This results in multiple variables being defined, all
+sharing the same prefix. See the output `cppo -help` (copied below).
+
+```
+$ ./cppo -V OCAML:`ocamlc -version`
+#if OCAML_VERSION >= (4, 0, 0)
+(* All is well. *)
+#else
+  #error "This version of OCaml is not supported."
+#endif
+```
+
+Output:
+```
+# 2 "<stdin>"
+(* All is well. *)
 ```
 
 Source file location
 --------------------
 
-Location directives are the same as OCaml and are echoed in the
+Location directives are the same as in OCaml and are echoed in the
 output. They consist of a line number optionally followed by a file name:
 
 ```ocaml
@@ -362,7 +386,9 @@ Printf.printf ">>> %s\n" "print_endline"; print_endline "Hello"
 Ocamlbuild plugin
 ------------------
 
-An ocamlbuild plugin is available. To use it, you can call ocamlbuild with the argument `--plugin-tag package(cppo_ocamlbuild)` (only since 4.01).
+An ocamlbuild plugin is available. To use it, you can call ocamlbuild
+with the argument `--plugin-tag package(cppo_ocamlbuild)` (only since
+4.01).
 
 With Oasis :
 ```
@@ -380,7 +406,8 @@ let () =
     )
 ```
 
-The plugin will apply cppo on all files ending in `.cppo.ml` in order to produce`.ml` files. The following tags are available:
+The plugin will apply cppo on all files ending in `.cppo.ml` in order
+to produce`.ml` files. The following tags are available:
 * `cppo_D(X)` ≡ `-D X`
 * `cppo_U(X)` ≡ `-U X`
 * `cppo_q` ≡ `-q`
@@ -389,7 +416,8 @@ The plugin will apply cppo on all files ending in `.cppo.ml` in order to produce
 * `cppo_x(NAME:CMD_TEMPLATE)` ≡ `-x NAME:CMD_TEMPLATE`
 * The tag `cppo_I(foo)` can behave in two way:
   * If `foo` is a directory, it's equivalent to `-I foo`.
-  * If `foo` is a file, it adds `foo` as a dependency and apply `-I parent(foo)`.
+  * If `foo` is a file, it adds `foo` as a dependency and apply `-I
+    parent(foo)`.
 
 Detailed command-line usage and options
 ---------------------------------------
@@ -405,6 +433,21 @@ Options:
           input
   -I DIR
           Add directory DIR to the search path for included files
+  -V VAR:MAJOR.MINOR.PATCH-OPTPRERELEASE+OPTBUILD
+          Define the following variables extracted from a version string
+          (following the Semantic Versioning syntax http://semver.org/):
+
+            VAR_MAJOR           must be a non-negative int
+            VAR_MINOR           must be a non-negative int
+            VAR_PATCH           must be a non-negative int
+            VAR_PRERELEASE      if the OPTPRERELEASE part exists
+            VAR_BUILD           if the OPTBUILD part exists
+            VAR_VERSION         is the tuple (MAJOR, MINOR, PATCH)
+            VAR_VERSION_STRING  is the string MAJOR.MINOR.PATCH
+            VAR_VERSION_FULL    is the original string
+
+          Example: cppo -V OCAML:4.02.1
+
   -o FILE
           Output file
   -q
