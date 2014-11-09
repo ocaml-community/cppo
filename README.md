@@ -208,7 +208,8 @@ to an int literal or a tuple of int literals, e.g.:
 
 Version strings (http://semver.org/) can also be passed to cppo on the
 command line. This results in multiple variables being defined, all
-sharing the same prefix. See the output `cppo -help` (copied below).
+sharing the same prefix. See the output of `cppo -help` (copied at the
+bottom of this page).
 
 ```
 $ ./cppo -V OCAML:`ocamlc -version`
