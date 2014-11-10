@@ -27,6 +27,6 @@ let dispatcher = function
       flag ["cppo"; "cppo_n"] (A "-n") ;
       pflag ["cppo"] "cppo_x" (fun s -> S [A "-x"; A s]);
       pflag ["cppo"] "cppo_V" (fun s -> S [A "-V"; A s]);
-      flag ["cppo"] "cppo_V_OCAML" & S [A "-V"; A ("OCAML:" ^ Sys.ocaml_version)]
+      flag ["cppo"; "cppo_V_OCAML"] & S [A "-V"; A ("OCAML:" ^ Sys.ocaml_version)]
     end
   | _ -> ()
