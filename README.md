@@ -212,7 +212,7 @@ sharing the same prefix. See the output of `cppo -help` (copied at the
 bottom of this page).
 
 ```
-$ ./cppo -V OCAML:`ocamlc -version`
+$ cppo -V OCAML:`ocamlc -version`
 #if OCAML_VERSION >= (4, 0, 0)
 (* All is well. *)
 #else
