@@ -388,7 +388,7 @@ Ocamlbuild plugin
 ------------------
 
 An ocamlbuild plugin is available. To use it, you can call ocamlbuild
-with the argument `--plugin-tag package(cppo_ocamlbuild)` (only since
+with the argument `-plugin-tag package(cppo_ocamlbuild)` (only since
 4.01).
 
 With Oasis :
@@ -419,6 +419,8 @@ to produce`.ml` files. The following tags are available:
   * If `foo` is a directory, it's equivalent to `-I foo`.
   * If `foo` is a file, it adds `foo` as a dependency and apply `-I
     parent(foo)`.
+* `cppo_V(NAME:VERSION)` ≡ `-V NAME:VERSION`
+* `cppo_V_OCAML` ≡ `-V OCAML:VERSION`, where `VERSION` is the version of OCaml that ocamlbuild uses.
 
 Detailed command-line usage and options
 ---------------------------------------
