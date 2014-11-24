@@ -420,7 +420,8 @@ to produce`.ml` files. The following tags are available:
   * If `foo` is a file, it adds `foo` as a dependency and apply `-I
     parent(foo)`.
 * `cppo_V(NAME:VERSION)` ≡ `-V NAME:VERSION`
-* `cppo_V_OCAML` ≡ `-V OCAML:VERSION`, where `VERSION` is the version of OCaml that ocamlbuild uses.
+* `cppo_V_OCAML` ≡ `-V OCAML:VERSION`, where `VERSION`
+   is the version of OCaml that ocamlbuild uses.
 
 Detailed command-line usage and options
 ---------------------------------------
@@ -488,3 +489,10 @@ Options:
   -help  Display this list of options
   --help  Display this list of options
 ```
+
+
+Contributing
+------------
+
+See our contribution guidelines at
+https://github.com/mjambon/documents/blob/master/how-to-contribute.md
