@@ -24,7 +24,7 @@ export BINDIR
 
 
 
-BEST := opt
+BEST != if ocamlopt 2>/dev/null; then echo .native; else echo .byte; fi
 NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then \
                         echo YES; \
                       else \
@@ -33,7 +33,7 @@ NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then \
 
 OCAMLBUILD_IMPL := ocamlbuild_cppo.cma
 
-ifeq "${BEST}" "opt"
+ifeq "${BEST}" ".native"
 OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxa ocamlbuild_cppo.a
 ifeq "${NATDYNLINK}" "YES"
 OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxs
