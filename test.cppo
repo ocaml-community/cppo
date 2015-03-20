@@ -133,11 +133,11 @@ end
 DEBUG("test1 %i %i" x y)
 DEBUG("test2 %i" x)
 
-#include "testdata/incl.cppo"
+#include "test/incl.cppo"
 # 123456
 
 #789 "test"
-#include "testdata/incl.cppo"
+#include "test/incl.cppo"
 
 #define debug(s) Printf.eprintf "%S %i: %s\n%!" __FILE__ __LINE__ s
 
