@@ -73,7 +73,7 @@ obj
 '  (* lone single quote *)
 
 #define one 1
-oneê is not 1 ê
+one is not 1
 
 #undef x
 #define x #
