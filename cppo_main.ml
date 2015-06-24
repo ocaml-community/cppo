@@ -20,7 +20,7 @@ let semver_re = Str.regexp "\
 \\.\\([0-9]+\\)\
 \\(-\\([^+]*\\)\\)?\
 \\(\\+\\(.*\\)\\)?\
-$"
+\r?$"
 
 let parse_semver s =
   if not (Str.string_match semver_re s 0) then
@@ -43,7 +43,7 @@ let opt_define var o =
 
 let parse_version_spec s =
   let error () =
-    failwith (sprintf "Invalid version specification: %s" s)
+    failwith (sprintf "Invalid version specification: %S" s)
   in
   let prefix, version_full =
     try
