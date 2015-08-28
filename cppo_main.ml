@@ -82,7 +82,7 @@ let main () =
     "-D", Arg.String (fun s -> header := ("#define " ^ s ^ "\n") :: !header),
     "DEF
           Equivalent of interpreting '#define DEF' before processing the
-          input";
+          input, e.g. `cppo -D 'VERSION \"1.2.3\"'` (no equal sign)";
 
     "-U", Arg.String (fun s -> header := ("#undef " ^ s ^ "\n") :: !header),
     "IDENT
