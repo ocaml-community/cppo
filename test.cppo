@@ -42,7 +42,7 @@ failure
    456 *)
 test_multiline
 
-#define test_args(x,y) x y
+#define test_args(x, y) x y
 test_args("a","b")
 
 #define test_argc(x) x y

@@ -190,9 +190,17 @@ args1:
 ;
 
 def_args1:
-  IDENT COMMA def_args1
-                   { (snd $1) :: $3 }
-| IDENT            { [ snd $1 ] }
+| arg_blank IDENT COMMA def_args1
+                               { (snd $2) :: $4 }
+| arg_blank IDENT              { [ snd $2 ] }
+;
+
+arg_blank:
+| TEXT arg_blank         { let loc, is_space, s = $1 in
+                           if not is_space then
+                             error loc "Invalid argument list"
+                         }
+|                        { () }
 ;
 
 test:
