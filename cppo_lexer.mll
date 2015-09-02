@@ -102,6 +102,26 @@ let add_char env c =
 let get env = Buffer.contents env.buf
 
 let long_loc e = (e.token_start, pos2 e.lexbuf)
+
+let cppo_directives = [
+  "define";
+  "elif";
+  "else";
+  "endif";
+  "error";
+  "if";
+  "ifdef";
+  "ifndef";
+  "include";
+  "undef";
+  "warning";
+]
+
+let is_reserved_directive =
+  let tbl = Hashtbl.create 20 in
+  List.iter (fun s -> Hashtbl.add tbl s ()) cppo_directives;
+  fun s -> Hashtbl.mem tbl s
+
 }
 
 (* standard character classes used for macro identifiers *)
@@ -271,8 +291,10 @@ and directive e = parse
         add e (lexeme lexbuf);
         TEXT (long_loc e, true, get e) }
 
-  | blank* ['a'-'z']+
-      { e.in_directive <- false;
+  | blank* (['a'-'z']+ as s)
+      { if is_reserved_directive s then
+          error (loc lexbuf) "cppo directive with missing or wrong arguments";
+        e.in_directive <- false;
         add e (lexeme lexbuf);
         TEXT (long_loc e, false, get e) }
 
