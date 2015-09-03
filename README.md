@@ -11,7 +11,6 @@ Cppo is:
 * reasonably fast
 * simple to install and to maintain
 
-
 User guide
 ----------
 
