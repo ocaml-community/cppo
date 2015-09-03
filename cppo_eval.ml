@@ -451,7 +451,7 @@ and expand_node ?(top = false) g env0 x =
           with Not_found -> None
         in
         let g =
-          if top && def <> None then
+          if top && def <> None || g.call_loc == dummy_loc then
             { g with call_loc = loc }
           else g
         in

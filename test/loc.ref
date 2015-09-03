@@ -1,0 +1,21 @@
+# 2 "loc.cppo"
+  "loc.cppo"   2  
+# 3
+X(
+# 3
+    "loc.cppo"   3  
+# 3
+)
+X(
+# 4
+    "loc.cppo"   4  
+# 4
+)
+X(Y(
+# 5
+      "loc.cppo"   5  
+# 5
+  ))
+
+# 8
+   "loc.cppo"   8   
