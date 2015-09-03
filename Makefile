@@ -24,7 +24,7 @@ export BINDIR
 
 
 
-BEST != if ocamlopt 2>/dev/null; then echo .native; else echo .byte; fi
+BEST = $(shell if ocamlopt 2>/dev/null; then echo .native; else echo .byte; fi)
 NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then \
                         echo YES; \
                       else \
