@@ -97,3 +97,11 @@ let make_line_directive ?(fname = true) pos =
 let parse_file = ref ((fun file -> assert false) : string -> node list)
 
 let dummy_loc = (Lexing.dummy_pos, Lexing.dummy_pos)
+
+let rec flatten_nodes (l: node list): node list =
+  List.flatten (List.map flatten_node l)
+
+and flatten_node (node: node): node list =
+  match node with
+  | `Seq l -> flatten_nodes l
+  | x -> [x]

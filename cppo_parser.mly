@@ -68,7 +68,12 @@ full_node_list0:
 /* TODO: make lone COMMAs valid only in "main" rule */
 /* TODO: same for parentheses */
 node:
-  TEXT          { `Text $1 }
+| OP_PAREN node_or_comma_list0 CL_PAREN
+                { `Seq [`Text ($1, false, "(");
+                        `Seq $2;
+                        `Text ($3, false, ")")] }
+
+| TEXT          { `Text $1 }
 
 | IDENT         { let loc, name = $1 in
                   `Ident (loc, name, None) }
@@ -183,10 +188,15 @@ elif_list:
 |                  { [] }
 ;
 
-
 args1:
   node_list0 COMMA args1   { $1 :: $3  }
 | node_list0               { [ $1 ] }
+;
+
+node_or_comma_list0:
+| node node_or_comma_list0   { $1 :: $2 }
+| COMMA node_or_comma_list0  { `Text ($1, false, ",") :: $2 }
+|                            { [] }
 ;
 
 def_args1:

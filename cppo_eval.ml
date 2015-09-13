@@ -165,7 +165,7 @@ or into a variable with the same properties."
                `Text (_, is_space, s) -> s
              | _ ->
                  expansion_error ()
-           ) l
+           ) (Cppo_types.flatten_nodes l)
          in
          let s = String.concat "" text in
          (match Cppo_lexer.int_tuple_of_string s with

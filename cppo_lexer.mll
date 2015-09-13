@@ -353,6 +353,7 @@ and ocaml_token e = parse
       { new_line e;
         TEXT (loc lexbuf, false, lexeme lexbuf) }
 
+  | "("       { e.line_start <- false; OP_PAREN (loc lexbuf) }
   | ")"       { e.line_start <- false; CL_PAREN (loc lexbuf) }
   | ","       { e.line_start <- false; COMMA (loc lexbuf) }
 

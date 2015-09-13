@@ -1,4 +1,4 @@
-TESTS = ext comments cond tuple version
+TESTS = ext comments cond tuple paren_arg version
 .PHONY: all clean $(TESTS)
 
 all: $(TESTS)
@@ -24,6 +24,10 @@ tuple:
 loc:
 	../cppo loc.cppo > loc.out
 	diff -u loc.ref loc.out
+
+paren_arg:
+	../cppo paren_arg.cppo > paren_arg.out
+	diff -u paren_arg.ref paren_arg.out
 
 version:
 	../cppo -V X:123.05.2-alpha.1+foo-2.1 version.cppo > version.out
