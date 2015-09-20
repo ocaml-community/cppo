@@ -27,7 +27,6 @@
 %token < Cppo_types.loc * bool * string > TEXT /* bool means "is space" */
 %token EOF
 
-
 /* Priorities for boolean expressions */
 %left OR
 %left AND
@@ -45,34 +44,39 @@
 %%
 
 main:
-  full_node main { $1 :: $2 }
-| EOF      { [] }
+| unode main { $1 :: $2 }
+| EOF        { [] }
 ;
 
-full_node:
-  CL_PAREN   { `Text ($1, false, ")") }
-| COMMA      { `Text ($1, false, ",") }
-| node       { $1 }
+unode_list0:
+| unode unode_list0  { $1 :: $2 }
+|                    { [] }
 ;
 
-node_list0:
-  node node_list0  { $1 :: $2 }
-|                  { [] }
+pnode_list0:
+| pnode pnode_list0  { $1 :: $2 }
+|                    { [] }
 ;
 
-full_node_list0:
-  full_node full_node_list0  { $1 :: $2 }
-|                            { [] }
+/* node in which opening and closing parentheses don't need to match */
+unode:
+| node          { $1 }
+| OP_PAREN      { `Text ($1, false, "(") }
+| CL_PAREN      { `Text ($1, false, ")") }
+| COMMA         { `Text ($1, false, ",") }
 ;
 
-/* TODO: make lone COMMAs valid only in "main" rule */
-/* TODO: same for parentheses */
-node:
-| OP_PAREN node_or_comma_list0 CL_PAREN
+/* node in which parentheses must be closed */
+pnode:
+| node          { $1 }
+| OP_PAREN pnode_or_comma_list0 CL_PAREN
                 { `Seq [`Text ($1, false, "(");
                         `Seq $2;
                         `Text ($3, false, ")")] }
+;
 
+/* node without parentheses handling (need to use unode or pnode) */
+node:
 | TEXT          { `Text $1 }
 
 | IDENT         { let loc, name = $1 in
@@ -93,7 +97,7 @@ node:
 | CURRENT_LINE  { `Current_line $1 }
 | CURRENT_FILE  { `Current_file $1 }
 
-| DEF full_node_list0 ENDEF
+| DEF unode_list0 ENDEF
                 { let (pos1, _), name = $1 in
 
                   (* Additional spacing is needed for cases like '+foo+'
@@ -104,7 +108,7 @@ node:
                   let _, pos2 = $3 in
                   `Def ((pos1, pos2), name, body) }
 
-| DEFUN def_args1 CL_PAREN full_node_list0 ENDEF
+| DEFUN def_args1 CL_PAREN unode_list0 ENDEF
                 { let (pos1, _), name = $1 in
                   let args = $2 in
 
@@ -136,7 +140,7 @@ node:
 | EXT
                 { `Ext $1 }
 
-| IF test full_node_list0 elif_list ENDIF
+| IF test unode_list0 elif_list ENDIF
                 { let pos1, _ = $1 in
                   let _, pos2 = $5 in
                   let loc = (pos1, pos2) in
@@ -151,11 +155,11 @@ node:
                   `Cond (loc, test, if_true, if_false)
                 }
 
-| IF test full_node_list0 elif_list error
+| IF test unode_list0 elif_list error
                 { (* BUG? ocamlyacc fails to reduce that rule but not menhir *)
                   error $1 "missing #endif" }
 
-| IFDEF full_node_list0 elif_list ENDIF
+| IFDEF unode_list0 elif_list ENDIF
                 { let (pos1, _), test = $1 in
                   let _, pos2 = $4 in
                   let loc = (pos1, pos2) in
@@ -169,7 +173,7 @@ node:
                   `Cond (loc, test, if_true, if_false)
                 }
 
-| IFDEF full_node_list0 elif_list error
+| IFDEF unode_list0 elif_list error
                 { error (fst $1) "missing #endif" }
 
 | LINE          { `Line $1 }
@@ -177,11 +181,11 @@ node:
 
 
 elif_list:
-  ELIF test full_node_list0 elif_list
+  ELIF test unode_list0 elif_list
                    { let pos1, _ = $1 in
                      let pos2 = Parsing.rhs_end_pos 4 in
                      ((pos1, pos2), $2, $3) :: $4 }
-| ELSE full_node_list0
+| ELSE unode_list0
                    { let pos1, _ = $1 in
                      let pos2 = Parsing.rhs_end_pos 2 in
                      [ ((pos1, pos2), `True, $2) ] }
@@ -189,14 +193,14 @@ elif_list:
 ;
 
 args1:
-  node_list0 COMMA args1   { $1 :: $3  }
-| node_list0               { [ $1 ] }
+  pnode_list0 COMMA args1   { $1 :: $3  }
+| pnode_list0               { [ $1 ] }
 ;
 
-node_or_comma_list0:
-| node node_or_comma_list0   { $1 :: $2 }
-| COMMA node_or_comma_list0  { `Text ($1, false, ",") :: $2 }
-|                            { [] }
+pnode_or_comma_list0:
+| pnode pnode_or_comma_list0   { $1 :: $2 }
+| COMMA pnode_or_comma_list0   { `Text ($1, false, ",") :: $2 }
+|                              { [] }
 ;
 
 def_args1:
