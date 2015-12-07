@@ -1,0 +1,16 @@
+branches:
+  only:
+    - master
+
+install:
+  - appveyor DownloadFile "https://raw.githubusercontent.com/Chris00/ocaml-appveyor/master/install_ocaml.cmd" -FileName "C:\install_ocaml.cmd"
+  - C:\install_ocaml.cmd
+
+build_script:
+  - cd "%APPVEYOR_BUILD_FOLDER%"
+  - ocaml setup.ml -configure --enable-tests
+  - ocaml setup.ml -info -build
+  - ocaml setup.ml -install
+
+test_script:
+  - ocaml setup.ml -test
