@@ -8,8 +8,12 @@
 *.cmxa
 *.o
 *.a
+*.byte
+*.native
 *.annot
 *.automaton
+setup.data
+setup.log
 cppo_lexer.ml
 cppo_parser.mli
 cppo_parser.ml
