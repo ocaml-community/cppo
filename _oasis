@@ -39,39 +39,48 @@ Executable cppo
   Install:      true
 
 
+Executable diff
+  Build$:  flag(tests)
+  Path:    test
+  MainIs:  diff.ml
+  BuildTools: ocamlbuild
+  CompiledObject: best
+  Install: false
+
 Test "ext"
+  Run$:    os_type(Unix)
   Command: $cppo -x rot13:"tr '[a-z]' '[n-za-m]'" -x source:"./source.sh '%F' %B %E" ext.cppo > ext.out
-           diff -u ext.ref ext.out
+           $diff ext.ref ext.out
   WorkingDirectory: test
 
 Test "comments"
   Command: $cppo comments.cppo > comments.out
-           diff -u comments.ref comments.out
+           $diff comments.ref comments.out
   WorkingDirectory: test
 
 Test "cond"
   Command: $cppo cond.cppo > cond.out
-           diff -u cond.ref cond.out
+           $diff cond.ref cond.out
   WorkingDirectory: test
 
 Test "tuple"
   Command: $cppo tuple.cppo > tuple.out
-           diff -u tuple.ref tuple.out
+           $diff tuple.ref tuple.out
   WorkingDirectory: test
 
 Test "loc"
   Command: $cppo loc.cppo > loc.out
-           diff -u loc.ref loc.out
+           $diff loc.ref loc.out
   WorkingDirectory: test
 
 Test "paren_arg"
   Command: $cppo paren_arg.cppo > paren_arg.out
-           diff -u paren_arg.ref paren_arg.out
+           $diff paren_arg.ref paren_arg.out
   WorkingDirectory: test
 
 Test "unmatched"
   Command: $cppo unmatched.cppo > unmatched.out
-           diff -u unmatched.ref unmatched.out
+           $diff unmatched.ref unmatched.out
   WorkingDirectory: test
 
 Test "version"
