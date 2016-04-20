@@ -5,6 +5,10 @@ EXE=.exe
 else
 EXE=
 endif
+OBJ_EXT := $(shell ocamlc -config 2>/dev/null \
+                 | grep '^ext_obj'|sed 's/ext_obj: //')
+LIB_EXT := $(shell ocamlc -config 2>/dev/null \
+                 | grep '^ext_lib'|sed 's/ext_lib: //')
 
 ifndef OCAMLYACC
   OCAMLYACC = ocamlyacc
@@ -34,7 +38,7 @@ NATDYNLINK ?= $(shell if [ -f `ocamlc -where`/dynlink.cmxa ]; then \
 OCAMLBUILD_IMPL := ocamlbuild_cppo.cma
 
 ifeq "${BEST}" ".native"
-OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxa ocamlbuild_cppo.a
+OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxa ocamlbuild_cppo$(LIB_EXT)
 ifeq "${NATDYNLINK}" "YES"
 OCAMLBUILD_IMPL += ocamlbuild_cppo.cmxs
 endif
@@ -99,7 +103,7 @@ test:
 	$(MAKE) -C test
 
 clean:
-	rm -f *.cm[iox] *.o *.annot *.conflicts *.automaton \
+	rm -f *.cm[iox] *$(OBJ_EXT) *.annot *.conflicts *.automaton \
 		cppo \
 		cppo_parser.mli cppo_parser.ml cppo_lexer.ml cppo_version.ml
 	$(MAKE) -C examples clean
