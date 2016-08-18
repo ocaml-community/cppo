@@ -406,8 +406,9 @@ let () =
     )
 ```
 
-The plugin will apply cppo on all files ending in `.cppo.ml` in order
-to produce`.ml` files. The following tags are available:
+By default the plugin will apply cppo on all files ending in `.cppo.ml`
+`cppo.mli`, and `cppo.mlpack`, in order to produce `.ml`, `.mli`,
+and`.mlpack` files.  The following tags are available:
 * `cppo_D(X)` ≡ `-D X`
 * `cppo_U(X)` ≡ `-U X`
 * `cppo_q` ≡ `-q`
