@@ -1,23 +1,22 @@
 
 open Ocamlbuild_plugin
 
+let insert_cppo_rules ext =
+  let dep   = "%(name).cppo"-.-ext
+  and prod1 = "%(name: <*> and not <*.cppo>)"-.-ext
+  and prod2 = "%(name: <**/*> and not <**/*.cppo>)"-.-ext in
+  let cppo_rule prod env _build =
+    let dep = env dep in
+    let prod = env prod in
+    let tags = tags_of_pathname prod ++ "cppo" in
+    Cmd (S[A "cppo"; T tags; S [A "-o"; P prod]; P dep ])
+  in
+  rule ("cppo: *.cppo."-.-ext^" -> *."-.-ext)  ~dep ~prod:prod1 (cppo_rule prod1);
+  rule ("cppo: **/*.cppo."-.-ext^" -> **/*."-.-ext)  ~dep ~prod:prod2 (cppo_rule prod2)
+
 let dispatcher = function
   | After_rules -> begin
-      let cppo_rules ext =
-        let dep   = "%(name).cppo"-.-ext
-        and prod1 = "%(name: <*> and not <*.cppo>)"-.-ext
-        and prod2 = "%(name: <**/*> and not <**/*.cppo>)"-.-ext in
-        let cppo_rule prod env _build =
-          let dep = env dep in
-          let prod = env prod in
-          let tags = tags_of_pathname prod ++ "cppo" in
-          Cmd (S[A "cppo"; T tags; S [A "-o"; P prod]; P dep ])
-        in
-        rule ("cppo: *.cppo."-.-ext^" -> *."-.-ext)  ~dep ~prod:prod1 (cppo_rule prod1);
-        rule ("cppo: **/*.cppo."-.-ext^" -> **/*."-.-ext)  ~dep ~prod:prod2 (cppo_rule prod2);
-      in
-      List.iter cppo_rules ["ml"; "mli"];
-
+      List.iter insert_cppo_rules ["ml"; "mli"; "mlpack"];
       pflag ["cppo"] "cppo_D" (fun s -> S [A "-D"; A s]) ;
       pflag ["cppo"] "cppo_U" (fun s -> S [A "-U"; A s]) ;
       pflag ["cppo"] "cppo_I" (fun s ->
