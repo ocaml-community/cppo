@@ -1,7 +1,7 @@
 
 open Ocamlbuild_plugin
 
-let insert_cppo_rules ext =
+let cppo_rules ext =
   let dep   = "%(name).cppo"-.-ext
   and prod1 = "%(name: <*> and not <*.cppo>)"-.-ext
   and prod2 = "%(name: <**/*> and not <**/*.cppo>)"-.-ext in
@@ -16,7 +16,7 @@ let insert_cppo_rules ext =
 
 let dispatcher = function
   | After_rules -> begin
-      List.iter insert_cppo_rules ["ml"; "mli"; "mlpack"];
+      List.iter cppo_rules ["ml"; "mli"; "mlpack"];
       pflag ["cppo"] "cppo_D" (fun s -> S [A "-D"; A s]) ;
       pflag ["cppo"] "cppo_U" (fun s -> S [A "-U"; A s]) ;
       pflag ["cppo"] "cppo_I" (fun s ->
