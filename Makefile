@@ -61,14 +61,14 @@ ML = cppo_version.ml cppo_types.ml \
 OCAMLBUILD_ML = ocamlbuild_cppo.ml
 
 all: $(ML)
-	ocamlc -o cppo$(EXE) -dtypes unix.cma str.cma $(ML)
+	ocamlfind ocamlc -o cppo$(EXE) -dtypes -linkpkg -package "unix str bytes" $(ML)
 
 opt: $(ML)
-	ocamlopt -o cppo$(EXE) -dtypes unix.cmxa str.cmxa $(ML)
+	ocamlfind ocamlopt -o cppo$(EXE) -dtypes -linkpkg -package "unix str bytes" $(ML)
 
 # For debugging; not installed.
 toplib: $(ML)
-	ocamlc -a -o cppo.cma -dtypes unix.cma str.cma $(ML)
+	ocamlfind ocamlc -a -o cppo.cma -dtypes -linkpkg -package "unix str bytes" $(ML)
 
 ocamlbuild:
 	cd ocamlbuild_plugin && ocamlbuild -use-ocamlfind $(OCAMLBUILD_IMPL)
