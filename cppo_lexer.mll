@@ -19,7 +19,7 @@ let lex_new_lines lb =
   let n = ref 0 in
   let s = lb.lex_buffer in
   for i = lb.lex_start_pos to lb.lex_curr_pos do
-    if s.[i] = '\n' then
+    if Bytes.get s i = '\n' then
       incr n
   done;
   let p = lb.lex_curr_p in
