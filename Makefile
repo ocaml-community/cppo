@@ -45,6 +45,7 @@ endif
 endif
 
 OCAMLBUILD_INSTALL = ocamlbuild_plugin/_build/ocamlbuild_cppo.cmi \
+                     ocamlbuild_plugin/_build/ocamlbuild_cppo.cmx \
                      $(addprefix ocamlbuild_plugin/_build/,$(OCAMLBUILD_IMPL))
 
 
