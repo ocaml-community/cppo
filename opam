@@ -16,7 +16,7 @@ install: [
 ]
 
 remove: [
-  ["ocamlfind" "remove" "cppo_ocamlbuild"]
+  ["make" "uninstall-lib"]
 ]
 
 depends: [

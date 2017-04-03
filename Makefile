@@ -84,6 +84,11 @@ install-lib:
 	ocamlfind install -patch-version ${VERSION} "cppo_ocamlbuild" \
 		META $(OCAMLBUILD_INSTALL)
 
+uninstall-lib:
+	ocamlfind remove cppo_ocamlbuild
+
+reinstall-lib: uninstall-lib install-lib
+
 cppo_version.ml: Makefile
 	echo 'let cppo_version = "$(VERSION)"' > cppo_version.ml
 
