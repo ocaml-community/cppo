@@ -1,4 +1,4 @@
-TESTS = ext comments cond tuple paren_arg unmatched version
+TESTS = ext comments cond tuple paren_arg unmatched version capital
 .PHONY: all clean $(TESTS)
 
 all: $(TESTS)
@@ -36,5 +36,8 @@ unmatched:
 version:
 	../cppo -V X:123.05.2-alpha.1+foo-2.1 version.cppo > version.out
 
+capital:
+	../cppo $@.cppo > $@.out
+	diff -u $@.ref $@.out
 clean:
 	rm -f *~ *.out

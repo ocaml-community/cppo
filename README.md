@@ -358,6 +358,24 @@ because 123z does not form a valid identifier.
 
 `CONCAT(a,b)` is roughly equivalent to `a##b` in cpp syntax.
 
+CAPITALIZE
+---------------
+
+`CAPITALIZE()` is a predefined macro that takes one argument,
+removes any leading and trailing whitespace, reduces each internal
+whitespace sequence to a single space character and produces
+a valid OCaml identifer with first character.
+
+For example,
+```ocaml
+#define EVENT(n,ty) external CONCAT(on,CAPITALIZE(n)) : ty = STRINGIFY(n) [@@bs.val] 
+EVENT(exit, unit -> unit)
+```
+is expanded into:
+
+```ocaml
+external  onExit  :  unit -> unit = "exit" [@@bs.val]
+```
 
 Stringification
 ---------------
