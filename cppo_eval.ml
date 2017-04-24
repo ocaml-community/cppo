@@ -23,6 +23,13 @@ let builtins = [
                                  `Ident (dummy_loc, "y", None))],
                        env)
             );
+  "CAPITALIZE", (fun env ->
+    `Defun (dummy_loc, "CAPITALIZE",
+            ["x"],
+            [`Capitalize (`Ident (dummy_loc, "x", None))],
+            env)
+  );
+
 ]
 
 let is_reserved s =
@@ -84,7 +91,11 @@ let trim_and_compact_string s =
   let buf = Buffer.create (String.length s) in
   trim_and_compact buf s;
   Buffer.contents buf
-
+let trim_compact_and_capitalize_string s =
+  let buf = Buffer.create (String.length s) in
+  trim_and_compact buf s;
+  String.capitalize (Buffer.contents buf)
+  
 let is_ident s =
   let len = String.length s in
   len > 0
@@ -442,7 +453,7 @@ let rec include_file g loc rel_file env =
 and expand_list ?(top = false) g env l =
   List.fold_left (expand_node ~top g) env l
 
-and expand_node ?(top = false) g env0 x =
+and expand_node ?(top = false) g env0 (x : node) =
   match x with
       `Ident (loc, name, opt_args) ->
 
@@ -610,6 +621,20 @@ and expand_node ?(top = false) g env0 x =
         g.enable_loc := enable_loc0;
         env0
 
+    | `Capitalize (x : node) ->
+        let enable_loc0 = !(g.enable_loc) in
+        g.enable_loc := false;
+        let buf0 = g.buf in
+        let local_buf = Buffer.create 100 in
+        g.buf <- local_buf;
+        ignore (expand_node g env0 x);
+        let xs = Buffer.contents local_buf in
+        let s = trim_compact_and_capitalize_string xs in
+          (* stringify buf0 (Buffer.contents local_buf); *)
+        Buffer.add_string buf0 s ;
+        g.buf <- buf0;
+        g.enable_loc := enable_loc0;
+        env0
     | `Concat (x, y) ->
         let enable_loc0 = !(g.enable_loc) in
         g.enable_loc := false;
