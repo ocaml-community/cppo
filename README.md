@@ -406,7 +406,7 @@ Ocamlbuild plugin
 
 An ocamlbuild plugin is available. To use it, you can call ocamlbuild
 with the argument `-plugin-tag package(cppo_ocamlbuild)` (only since
-4.01).
+ocaml 4.01 and cppo >= 0.9.4).
 
 With Oasis :
 ```
