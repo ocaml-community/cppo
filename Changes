@@ -1,8 +1,8 @@
 2017-04-24: release 1.5.0
-  [???] Added the `CAPITALIZE()` function.
+  [+ui] Added the `CAPITALIZE()` function.
 
 2016-08-19: release 1.4.0
-  [???] Cppo is now safe-string ready.
+  [compat] Cppo is now safe-string ready.
 
 2016-04-20: release 1.3.2
   [pkg] Cppo can now be built on MSVC.
@@ -11,8 +11,8 @@
   [bug] Possible to have #endif between two matching parenthesis.
 
 2015-09-13: release 1.3.0
-  [?ui] Removed the need for escaping commas and parenthesis in macros.
-  [?ui] Blanks is now allowed in argument list in macro definitions.
+  [+ui] Removed the need for escaping commas and parenthesis in macros.
+  [+ui] Blanks is now allowed in argument list in macro definitions.
   [+ui] #directive with wrong arguments is now giving a proper error.
   [bug] Fixed expansion of __FILE__ and __LINE__.
 
