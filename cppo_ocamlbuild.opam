@@ -5,22 +5,16 @@ homepage: "http://mjambon.com/cppo.html"
 dev-repo: "https://github.com/mjambon/cppo.git"
 bug-reports: "https://github.com/mjambon/cppo/issues"
 license: "BSD-3-Clause"
+
 build: [
-  [make "all"] {!ocaml-native}
-  [make "opt"] {ocaml-native}
-  [make "ocamlbuild"]
+  ["jbuilder" "subst"] {pinned}
+  ["jbuilder" "build" "-p" name "-j" jobs]
 ]
-
-install: [
-  [make "install-lib"]
-]
-
-remove: [
-  ["make" "uninstall-lib"]
+build-test: [
+  ["jbuilder" "runtest" "-p" name]
 ]
 
 depends: [
-  "ocamlfind"
+  "jbuilder" {build & >= "1.0+beta10"}
   "ocamlbuild"
-  "base-bytes"
 ]
