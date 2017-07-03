@@ -1,0 +1,7 @@
+(jbuild_version 1)
+
+(library
+ ((name cppo_ocamlbuild)
+  (public_name cppo_ocamlbuild)
+  (synopsis "Cppo ocamlbuild plugin")
+  (libraries (ocamlbuild))))
