@@ -4,9 +4,15 @@ all:
 test:
 	@jbuilder runtest
 
+install:
+	@jbuilder install
+
+uninstall:
+	@jbuilder uninstall
+
 check: test
 
-.PHONY: clean all check test
+.PHONY: clean all check test install uninstall
 
 clean:
 	jbuilder clean
