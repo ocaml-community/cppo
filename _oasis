@@ -1,0 +1,94 @@
+OASISFormat: 0.4
+Name:        cppo
+Version:     1.3.1
+Synopsis:    An equivalent of the C preprocessor for OCaml programs
+
+Description: Cppo is an equivalent of the C preprocessor targeted at
+  the OCaml language and its variants.
+  .
+  The main purpose of cppo is to provide a lightweight tool for simple
+  macro substitution ("define") and file inclusion ("include") for the
+  occasional case when this is useful in OCaml. Processing specific
+  sections of files by calling external programs is also possible
+  via "ext" directives.
+  .
+  The implementation of cppo relies on the standard library of OCaml
+  and on the standard parsing tools Ocamllex and Ocamlyacc, which
+  contribute to the robustness of cppo across OCaml versions.
+Authors:     Martin Jambon <martin@mjambon.com>
+Maintainers: Martin Jambon <martin@mjambon.com>
+License:     BSD-3-clause
+Homepage:    http://mjambon.com/cppo.html
+Plugins:     META (0.4)
+OCamlVersion: >= 3.12
+FilesAB:     cppo_version.ml.ab
+PostCleanCommand: $rm test/*.out
+
+Library ocamlbuild_cppo
+  Path:       ocamlbuild_plugin
+  BuildTools: ocamlbuild
+  Modules:    Ocamlbuild_cppo
+  BuildDepends: unix, str, ocamlbuild
+
+Executable cppo
+  Path:         .
+  MainIs:       cppo_main.ml
+  BuildTools:   ocamlbuild
+  BuildDepends: unix, str
+  CompiledObject: best
+  Install:      true
+
+
+Executable diff
+  Build$:  flag(tests)
+  Path:    test
+  MainIs:  diff.ml
+  BuildTools: ocamlbuild
+  CompiledObject: best
+  Install: false
+
+Test "ext"
+  Run$:    os_type(Unix)
+  Command: $cppo -x rot13:"tr '[a-z]' '[n-za-m]'" -x source:"./source.sh '%F' %B %E" ext.cppo > ext.out
+           $diff ext.ref ext.out
+  WorkingDirectory: test
+
+Test "comments"
+  Command: $cppo comments.cppo > comments.out
+           $diff comments.ref comments.out
+  WorkingDirectory: test
+
+Test "cond"
+  Command: $cppo cond.cppo > cond.out
+           $diff cond.ref cond.out
+  WorkingDirectory: test
+
+Test "tuple"
+  Command: $cppo tuple.cppo > tuple.out
+           $diff tuple.ref tuple.out
+  WorkingDirectory: test
+
+Test "loc"
+  Command: $cppo loc.cppo > loc.out
+           $diff loc.ref loc.out
+  WorkingDirectory: test
+
+Test "paren_arg"
+  Command: $cppo paren_arg.cppo > paren_arg.out
+           $diff paren_arg.ref paren_arg.out
+  WorkingDirectory: test
+
+Test "unmatched"
+  Command: $cppo unmatched.cppo > unmatched.out
+           $diff unmatched.ref unmatched.out
+  WorkingDirectory: test
+
+Test "version"
+  Command: $cppo -V X:123.05.2-alpha.1+foo-2.1 version.cppo > version.out
+  WorkingDirectory: test
+
+
+SourceRepository master
+  Type:       git
+  Location:   https://github.com/mjambon/cppo.git
+  Browser:    https://github.com/mjambon/cppo

@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 946204da861f4b0c14f557d76f66941f)
+version = "1.3.1"
+description = "An equivalent of the C preprocessor for OCaml programs"
+requires = "unix str ocamlbuild"
+archive(byte) = "ocamlbuild_cppo.cma"
+archive(byte, plugin) = "ocamlbuild_cppo.cma"
+archive(native) = "ocamlbuild_cppo.cmxa"
+archive(native, plugin) = "ocamlbuild_cppo.cmxs"
+exists_if = "ocamlbuild_cppo.cma"
+# OASIS_STOP
+

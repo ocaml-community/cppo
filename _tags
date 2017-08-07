@@ -1,0 +1,28 @@
+# OASIS_START
+# DO NOT EDIT (digest: 7395109eca5af4904c14125bac44dbb6)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library ocamlbuild_cppo
+"ocamlbuild_plugin/ocamlbuild_cppo.cmxs": use_ocamlbuild_cppo
+<ocamlbuild_plugin/*.ml{,i,y}>: pkg_ocamlbuild
+<ocamlbuild_plugin/*.ml{,i,y}>: pkg_str
+<ocamlbuild_plugin/*.ml{,i,y}>: pkg_unix
+# Executable cppo
+<cppo_main.{native,byte}>: pkg_str
+<cppo_main.{native,byte}>: pkg_unix
+<*.ml{,i,y}>: pkg_str
+<*.ml{,i,y}>: pkg_unix
+# Executable diff
+# OASIS_STOP

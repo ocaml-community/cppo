@@ -1,0 +1,2 @@
+(* 							-*-tuareg-*- *)
+let cppo_version = "$pkg_version"
