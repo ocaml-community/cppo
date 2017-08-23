@@ -408,6 +408,9 @@ An ocamlbuild plugin is available. To use it, you can call ocamlbuild
 with the argument `-plugin-tag package(cppo_ocamlbuild)` (only since
 ocaml 4.01 and cppo >= 0.9.4).
 
+Starting from **cppo >= 1.6.0**, the `cppo_ocamlbuild` plugin is in a
+separate OPAM package (`opam install cppo_ocamlbuild`).
+
 With Oasis :
 ```
 OCamlVersion: >= 4.01
