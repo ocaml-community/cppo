@@ -15,7 +15,7 @@ User guide
 ----------
 
 Cppo is a preprocessor for programming languages that follow lexical rules
-compatible with OCaml.
+compatible with OCaml. These include Ocamllex, Ocamlyacc, Menhir, and extensions of OCaml based on Camlp4, Camlp5, or ppx. It should work with Bucklescript as well. It won't work so well with Reason code because of the C-style comments `/* ... */`.
 
 Cppo supports a number of directives. A directive is a `#` sign placed
 at the beginning of a line, possibly preceded by some whitespace, and followed
