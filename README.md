@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/ft3167hf8yr2n5d3?svg=true)](https://ci.appveyor.com/project/Chris00/cppo-pnjtx)
+
 Cppo: cpp for OCaml
 ===================
 
