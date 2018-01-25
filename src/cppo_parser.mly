@@ -1,10 +1,5 @@
 %{
-  open Printf
   open Cppo_types
-
-  let print = print_string
-
-  let rhs_loc n1 n2 = (Parsing.rhs_start_pos n1, Parsing.rhs_end_pos n2)
 %}
 
 /* Directives */
@@ -210,7 +205,7 @@ def_args1:
 ;
 
 arg_blank:
-| TEXT arg_blank         { let loc, is_space, s = $1 in
+| TEXT arg_blank         { let loc, is_space, _s = $1 in
                            if not is_space then
                              error loc "Invalid argument list"
                          }

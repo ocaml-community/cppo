@@ -26,4 +26,4 @@ val include_inputs
             > `Def `Defun ]
        as 'b)
         M.t as 'a)
-  -> (string * string * (unit -> Lexing.lexbuf) * (unit -> 'c)) list -> 'a
+  -> (string * string * (unit -> Lexing.lexbuf) * (unit -> unit)) list -> 'a

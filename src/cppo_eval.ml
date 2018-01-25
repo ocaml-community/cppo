@@ -5,11 +5,9 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
-let empty_env = M.empty
-
 let builtins = [
-  "__FILE__", (fun env -> `Special);
-  "__LINE__", (fun env -> `Special);
+  "__FILE__", (fun _env -> `Special);
+  "__LINE__", (fun _env -> `Special);
   "STRINGIFY", (fun env ->
                   `Defun (dummy_loc, "STRINGIFY",
                           ["x"],
@@ -38,20 +36,13 @@ let is_reserved s =
 let builtin_env =
   List.fold_left (fun env (s, f) -> M.add s (f env) env) M.empty builtins
 
-let line_directive buf prev_file pos =
-  let file = pos.Lexing.pos_fname in
+let line_directive buf pos =
   let len = Buffer.length buf in
   if len > 0 && Buffer.nth buf (len - 1) <> '\n' then
     Buffer.add_char buf '\n';
-  (match prev_file with
-       Some s when s = file ->
-         bprintf buf "# %i\n"
-           pos.Lexing.pos_lnum
-     | _ ->
-         bprintf buf "# %i %S\n"
-           pos.Lexing.pos_lnum
-           pos.Lexing.pos_fname
-  );
+  bprintf buf "# %i %S\n"
+    pos.Lexing.pos_lnum
+    pos.Lexing.pos_fname;
   bprintf buf "%s" (String.make (pos.Lexing.pos_cnum - pos.Lexing.pos_bol) ' ')
 
 let rec add_sep sep last = function
@@ -95,7 +86,7 @@ let trim_compact_and_capitalize_string s =
   let buf = Buffer.create (String.length s) in
   trim_and_compact buf s;
   String.capitalize (Buffer.contents buf)
-  
+
 let is_ident s =
   let len = String.length s in
   len > 0
@@ -173,7 +164,7 @@ or into a variable with the same properties."
          let text =
            List.map (
              function
-               `Text (_, is_space, s) -> s
+               `Text (_, _is_space, s) -> s
              | _ ->
                  expansion_error ()
            ) (Cppo_types.flatten_nodes l)
@@ -185,7 +176,7 @@ or into a variable with the same properties."
           | None ->
               expansion_error ()
          )
-   with Cppo_error s ->
+   with Cppo_error _ ->
      expansion_error ()
   )
 
@@ -293,7 +284,7 @@ let compare_tuples env (a : arith_expr) (b : arith_expr) =
       let eval_list l = List.map (eval_int env) l in
       compare_lists (eval_list al) (eval_list bl)
 
-  | `Tuple (loc1, al), `Tuple (loc2, bl) ->
+  | `Tuple (_loc1, al), `Tuple (loc2, bl) ->
       error loc2
         (sprintf "Tuple of length %i cannot be compared to a tuple of length %i"
            (List.length bl) (List.length al)
@@ -333,9 +324,6 @@ type globals = {
   require_location : bool ref;
     (* whether a line directive should be printed before outputting the next
        token *)
-
-  last_file_loc : string option ref;
-    (* used to test whether a line directive should include the file name *)
 
   show_exact_locations : bool;
     (* whether line directives should be printed even for expanded macro
@@ -378,11 +366,8 @@ let plural n =
 
 let maybe_print_location g pos =
   if !(g.enable_loc) then
-    let prev_file = !(g.last_file_loc) in
-    let file = pos.Lexing.pos_fname in
     if !(g.require_location) then (
-      line_directive g.buf prev_file pos;
-      g.last_file_loc := Some file
+      line_directive g.buf pos
     )
 
 let expand_ext g loc id data =
@@ -500,7 +485,7 @@ and expand_node ?(top = false) g env0 (x : node) =
                   (sprintf "%S expects %i arguments but is applied to none."
                      name (List.length arg_names))
 
-            | Some (`Def _), Some l ->
+            | Some (`Def _), Some _ ->
                 error loc
                   (sprintf "%S expects no arguments" name)
 
@@ -578,10 +563,9 @@ and expand_node ?(top = false) g env0 (x : node) =
         g.require_location := true;
         expand_ext g loc id data;
         g.require_location := true;
-        g.last_file_loc := None;
         env0
 
-    | `Cond (loc, test, if_true, if_false) ->
+    | `Cond (_loc, test, if_true, if_false) ->
         let l =
           if eval_bool env0 test then if_true
           else if_false
@@ -700,7 +684,6 @@ let include_inputs
         buf = buf;
         included = S.empty;
         require_location = ref true;
-        last_file_loc = ref None;
         show_exact_locations = show_exact_locations;
         enable_loc = ref enable_loc;
         g_preserve_quotations = preserve_quotations;
