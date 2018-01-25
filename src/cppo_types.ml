@@ -87,16 +87,6 @@ let warning loc s =
     sprintf "%s\nWarning: %s" (string_of_loc loc) s in
   eprintf "%s\n%!" msg
 
-let make_line_directive ?(fname = true) pos =
-  let spaces = String.make (pos.pos_cnum - pos.pos_bol) ' ' in
-  if fname then
-    sprintf "# %i %S\n%s" pos.pos_lnum pos.pos_fname spaces
-  else
-    sprintf "# %i\n%s" pos.pos_lnum spaces
-
-
-let parse_file = ref ((fun file -> assert false) : string -> node list)
-
 let dummy_loc = (Lexing.dummy_pos, Lexing.dummy_pos)
 
 let rec flatten_nodes (l: node list): node list =

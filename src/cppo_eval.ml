@@ -5,11 +5,9 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
-let empty_env = M.empty
-
 let builtins = [
-  "__FILE__", (fun env -> `Special);
-  "__LINE__", (fun env -> `Special);
+  "__FILE__", (fun _env -> `Special);
+  "__LINE__", (fun _env -> `Special);
   "STRINGIFY", (fun env ->
                   `Defun (dummy_loc, "STRINGIFY",
                           ["x"],
@@ -166,7 +164,7 @@ or into a variable with the same properties."
          let text =
            List.map (
              function
-               `Text (_, is_space, s) -> s
+               `Text (_, _is_space, s) -> s
              | _ ->
                  expansion_error ()
            ) (Cppo_types.flatten_nodes l)
@@ -178,7 +176,7 @@ or into a variable with the same properties."
           | None ->
               expansion_error ()
          )
-   with Cppo_error s ->
+   with Cppo_error _ ->
      expansion_error ()
   )
 
@@ -286,7 +284,7 @@ let compare_tuples env (a : arith_expr) (b : arith_expr) =
       let eval_list l = List.map (eval_int env) l in
       compare_lists (eval_list al) (eval_list bl)
 
-  | `Tuple (loc1, al), `Tuple (loc2, bl) ->
+  | `Tuple (_loc1, al), `Tuple (loc2, bl) ->
       error loc2
         (sprintf "Tuple of length %i cannot be compared to a tuple of length %i"
            (List.length bl) (List.length al)
@@ -487,7 +485,7 @@ and expand_node ?(top = false) g env0 (x : node) =
                   (sprintf "%S expects %i arguments but is applied to none."
                      name (List.length arg_names))
 
-            | Some (`Def _), Some l ->
+            | Some (`Def _), Some _ ->
                 error loc
                   (sprintf "%S expects no arguments" name)
 
@@ -567,7 +565,7 @@ and expand_node ?(top = false) g env0 (x : node) =
         g.require_location := true;
         env0
 
-    | `Cond (loc, test, if_true, if_false) ->
+    | `Cond (_loc, test, if_true, if_false) ->
         let l =
           if eval_bool env0 test then if_true
           else if_false
