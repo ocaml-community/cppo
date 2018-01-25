@@ -38,20 +38,13 @@ let is_reserved s =
 let builtin_env =
   List.fold_left (fun env (s, f) -> M.add s (f env) env) M.empty builtins
 
-let line_directive buf prev_file pos =
-  let file = pos.Lexing.pos_fname in
+let line_directive buf pos =
   let len = Buffer.length buf in
   if len > 0 && Buffer.nth buf (len - 1) <> '\n' then
     Buffer.add_char buf '\n';
-  (match prev_file with
-       Some s when s = file ->
-         bprintf buf "# %i\n"
-           pos.Lexing.pos_lnum
-     | _ ->
-         bprintf buf "# %i %S\n"
-           pos.Lexing.pos_lnum
-           pos.Lexing.pos_fname
-  );
+  bprintf buf "# %i %S\n"
+    pos.Lexing.pos_lnum
+    pos.Lexing.pos_fname;
   bprintf buf "%s" (String.make (pos.Lexing.pos_cnum - pos.Lexing.pos_bol) ' ')
 
 let rec add_sep sep last = function
@@ -95,7 +88,7 @@ let trim_compact_and_capitalize_string s =
   let buf = Buffer.create (String.length s) in
   trim_and_compact buf s;
   String.capitalize (Buffer.contents buf)
-  
+
 let is_ident s =
   let len = String.length s in
   len > 0
@@ -334,9 +327,6 @@ type globals = {
     (* whether a line directive should be printed before outputting the next
        token *)
 
-  last_file_loc : string option ref;
-    (* used to test whether a line directive should include the file name *)
-
   show_exact_locations : bool;
     (* whether line directives should be printed even for expanded macro
        bodies *)
@@ -378,11 +368,8 @@ let plural n =
 
 let maybe_print_location g pos =
   if !(g.enable_loc) then
-    let prev_file = !(g.last_file_loc) in
-    let file = pos.Lexing.pos_fname in
     if !(g.require_location) then (
-      line_directive g.buf prev_file pos;
-      g.last_file_loc := Some file
+      line_directive g.buf pos
     )
 
 let expand_ext g loc id data =
@@ -578,7 +565,6 @@ and expand_node ?(top = false) g env0 (x : node) =
         g.require_location := true;
         expand_ext g loc id data;
         g.require_location := true;
-        g.last_file_loc := None;
         env0
 
     | `Cond (loc, test, if_true, if_false) ->
@@ -700,7 +686,6 @@ let include_inputs
         buf = buf;
         included = S.empty;
         require_location = ref true;
-        last_file_loc = ref None;
         show_exact_locations = show_exact_locations;
         enable_loc = ref enable_loc;
         g_preserve_quotations = preserve_quotations;
