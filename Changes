@@ -1,3 +1,7 @@
+2018-01-25: release 1.6.1
+  [compat] Emit line directives always containing the file name,
+           as mandated starting with ocaml 4.07.
+
 2017-08-07: release 1.6.0
   [pkg] BREAKING: cppo and cppo_ocamlbuild are now two distinct opam
         packages.
