@@ -90,7 +90,4 @@
 (alias
  ((name runtest)
   (deps (test.cppo incl.cppo incl2.cppo))
-  ;; we're creating this test.cppo.out file only to avoid
-  ;; seeing this output when running the test. We could just redirect
-  ;; to /dev/null but then we'd need a shell.
-  (action (with-stdout-to test.cppo.out (run ${bin:cppo} ${<})))))
+  (action (ignore-stdout (run ${bin:cppo} ${<})))))
