@@ -2,7 +2,7 @@
 (* '"' *)
 
 
-# 5
+# 5 "comments.cppo"
 (* "*)"
 #define DONT_TOUCH_THIS
 *)
