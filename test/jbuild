@@ -50,33 +50,27 @@
 
 (alias
  ((name runtest)
-  (deps (ext.ref ext.out))
-  (action (run diff -u ext.ref ext.out))))
+  (action (diff ext.ref ext.out))))
 
 (alias
  ((name runtest)
-  (deps (comments.ref comments.out))
-  (action (run diff -u comments.ref comments.out))))
+  (action (diff comments.ref comments.out))))
 
 (alias
  ((name runtest)
-  (deps (cond.ref cond.out))
-  (action (run diff -u cond.ref cond.out))))
+  (action (diff cond.ref cond.out))))
 
 (alias
  ((name runtest)
-  (deps (tuple.ref tuple.out))
-  (action (run diff -u tuple.ref tuple.out))))
+  (action (diff tuple.ref tuple.out))))
 
 (alias
  ((name runtest)
-  (deps (loc.ref loc.out))
-  (action (run diff -u loc.ref loc.out))))
+  (action (diff loc.ref loc.out))))
 
 (alias
  ((name runtest)
-  (deps (paren_arg.ref paren_arg.out))
-  (action (run diff -u paren_arg.ref paren_arg.out))))
+  (action (diff paren_arg.ref paren_arg.out))))
 
 (alias
  ((name runtest)
@@ -84,8 +78,7 @@
 
 (alias
  ((name runtest)
-  (deps (unmatched.ref unmatched.out))
-  (action (run diff -u unmatched.ref unmatched.out))))
+  (action (diff unmatched.ref unmatched.out))))
 
 (alias
  ((name runtest)
