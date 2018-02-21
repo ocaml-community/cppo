@@ -4,7 +4,7 @@
  ((targets (ext.out))
   (deps (ext.cppo source.sh))
   (action
-   (with-stdout-to ${@} (run ${bin:cppo} -x "rot13:tr '[a-z]' '[n-za-m]'" -x "source:./source.sh '%F' %B %E" ${<})))))
+   (with-stdout-to ${@} (run ${bin:cppo} -x "rot13:tr '[a-z]' '[n-za-m]'" -x "source:sh source.sh '%F' %B %E" ${<})))))
 
 (rule
  ((targets (comments.out))
