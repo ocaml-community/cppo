@@ -50,37 +50,46 @@
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff ext.ref ext.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff comments.ref comments.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff cond.ref cond.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff tuple.ref tuple.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff loc.ref loc.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff paren_arg.ref paren_arg.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (deps (version.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (action (diff unmatched.ref unmatched.out))))
 
 (alias
  ((name runtest)
+  (package cppo)
   (deps (test.cppo incl.cppo incl2.cppo))
   (action (ignore-stdout (run ${bin:cppo} ${<})))))
