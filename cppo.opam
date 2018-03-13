@@ -16,6 +16,5 @@ build-test: [
 
 depends: [
   "jbuilder" {build & >= "1.0+beta17"}
-  "base-bytes"
   "base-unix"
 ]
