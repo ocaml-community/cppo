@@ -1,3 +1,6 @@
+2018-09-12: release 1.6.5
+  [bug] Fix 'asr' operator (#61)
+
 2018-02-26: release 1.6.4
   [compat] Tests should now work with older versions of jbuilder.
 
