@@ -15,6 +15,7 @@ build-test: [
 ]
 
 depends: [
+  "ocaml" {>= "4.03"}
   "jbuilder" {build & >= "1.0+beta17"}
   "base-unix"
 ]
