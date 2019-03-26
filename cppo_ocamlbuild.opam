@@ -1,20 +1,25 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "martin@mjambon.com"
-authors: ["Martin Jambon"]
-homepage: "http://mjambon.com/cppo.html"
-dev-repo: "https://github.com/mjambon/cppo.git"
-bug-reports: "https://github.com/mjambon/cppo/issues"
+authors: "Martin Jambon"
 license: "BSD-3-Clause"
-
-build: [
-  ["jbuilder" "subst"] {pinned}
-  ["jbuilder" "build" "-p" name "-j" jobs]
-]
-build-test: [
-  ["jbuilder" "runtest" "-p" name]
-]
-
+homepage: "http://mjambon.com/cppo.html"
+doc: "https://ocaml-community.github.io/cppo/"
+bug-reports: "https://github.com/ocaml-community/cppo/issues"
 depends: [
-  "jbuilder" {build & >= "1.0+beta17"}
+  "ocaml"
+  "dune" {build & >= "1.0"}
   "ocamlbuild"
 ]
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+dev-repo: "git+https://github.com/ocaml-community/cppo.git"
+synopsis: "Plugin to use cppo with ocamlbuild"
+description: """
+This ocamlbuild plugin lets you use cppo in ocamlbuild projects.
+
+To use it, you can call ocamlbuild with the argument `-plugin-tag
+package(cppo_ocamlbuild)` (only since ocaml 4.01 and cppo >= 0.9.4).
+"""
