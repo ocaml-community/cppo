@@ -10,5 +10,5 @@ install:
 
 build_script:
   - cd "%APPVEYOR_BUILD_FOLDER%"
-  - jbuilder subst
-  - jbuilder build -p cppo
+  - dune subst
+  - dune build -p cppo
