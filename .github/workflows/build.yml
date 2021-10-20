@@ -1,8 +1,12 @@
 ---
 name: Build
 on:
-  - pull_request
-  - push
+  push:
+    branches:
+      - master  # forall push/merge in master
+  pull_request:
+    branches:
+      - "**"  # forall submitted Pull Requests
 
 jobs:
   build:
