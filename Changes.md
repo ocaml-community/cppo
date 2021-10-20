@@ -1,3 +1,7 @@
+## v1.6.8 (2021-09-17)
+- [compat] Allow version strings without patch numbers, _e.g._ `8.13+beta1`
+           The patch number will be set to 0 upon empty, _i.e._ `(8, 13, 0)`
+
 ## v1.6.7 (2020-12-21)
 - [compat] Treat ~ and - the same in semver in order to parse
            OCaml 4.12.0 pre-release versions.

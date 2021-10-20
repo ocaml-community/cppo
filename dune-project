@@ -6,14 +6,16 @@
 (source (github ocaml-community/cppo))
 (license BSD-3-Clause)
 (authors "Martin Jambon")
-(maintainers "martin@mjambon.com")
+(maintainers
+ "Martin Jambon <martin@mjambon.com>"
+ "Yishuai Li <yishuai@upenn.edu>")
 (documentation "https://ocaml-community.github.io/cppo")
 
 (package
  (name cppo)
  (depends
   (ocaml (>= 4.02.3))
-  (dune  (>= 1.0))
+  (dune  (>= 1.10))
    base-unix)
  (synopsis "Code preprocessor like cpp for OCaml")
  (description "Cppo is an equivalent of the C preprocessor for OCaml programs.
@@ -31,7 +33,7 @@ Cppo is:
  (name cppo_ocamlbuild)
  (depends
    ocaml
-  (dune (>= 1.0))
+  (dune (>= 1.10))
    ocamlbuild
    ocamlfind)
  (synopsis "Plugin to use cppo with ocamlbuild")
