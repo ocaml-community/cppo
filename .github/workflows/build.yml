@@ -37,6 +37,7 @@ jobs:
       SKIP_BUILD: |
         dose
         lilis
+        rotor
       SKIP_TEST: |
         0install
         bisect_ppx
@@ -78,9 +79,11 @@ jobs:
         run: opam install -t .
 
       - name: Test dependants
-        if: runner.os != 'Windows' && matrix.ocaml-version >= '4.03'
+        if: >
+          (runner.os == 'Linux' && matrix.ocaml-version >= '4.04') ||
+          (runner.os == 'macOS' && matrix.ocaml-version >= '4.13')
         run: |
-          PACKAGES=`opam list -s --color=never --depends-on cppo,cppo_ocamlbuild --installable`
+          PACKAGES=`opam list -s --color=never --installable --depends-on cppo,cppo_ocamlbuild`
           echo "Dependants:" $PACKAGES
           for PACKAGE in $PACKAGES
           do
@@ -88,8 +91,9 @@ jobs:
                echo Skip $PACKAGE && continue
              OPAMWITHTEST=true
              echo $SKIP_TEST | tr ' ' '\n' | grep ^$PACKAGE$ > /dev/null &&
-               OPAMWITHTEST=false
-             ([ $OPAMWITHTEST == false ] && echo ::group::Build $PACKAGE) ||
+                 OPAMWITHTEST=false
+             ([ $OPAMWITHTEST == false ] &&
+              echo ::group::Build          $PACKAGE) ||
               echo ::group::Build and test $PACKAGE
              DEPS_FAILED=false
              (opam depext $PACKAGE &&
