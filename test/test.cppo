@@ -36,9 +36,9 @@ failure
 #endif
 
 #define test_multiline \
-"abc\
+"abc
  def" \
-(* 123 \
+(* 123
    456 *)
 test_multiline
 
