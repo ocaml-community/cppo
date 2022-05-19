@@ -122,7 +122,8 @@
 (alias
  (name runtest)
  (package cppo)
- (deps version.out))
+ (action
+  (diff version.ref version.out)))
 
 (alias
  (name runtest)
