@@ -16,3 +16,6 @@ check: test
 
 clean:
 	dune clean
+
+publish%:
+	opam publish --tag=v$* -v $* ocaml-community/cppo
