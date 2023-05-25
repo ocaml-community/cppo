@@ -30,3 +30,5 @@ patch: X_PATCH
 #endif
 
 Coq: COQ_VERSION
+
+OCaml pre-release:  OCAML_PRERELEASE

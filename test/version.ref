@@ -35,3 +35,8 @@ patch:
 Coq: 
 # 32 "version.cppo"
       (8, 13, 0) 
+
+# 34 "version.cppo"
+OCaml pre-release:  
+# 34 "version.cppo"
+                     alpha1 
