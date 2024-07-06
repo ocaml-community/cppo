@@ -5,24 +5,36 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
+(* An environment entry. *)
+
+type entry =
+  | EDef   of loc * string               * node list * env
+  | EDefun of loc * string * string list * node list * env
+  | ESpecial
+
+(* An environment is a map of (macro) names to environment entries. *)
+
+and env =
+  entry M.t
+
 let builtins = [
-  "__FILE__", (fun _env -> `Special);
-  "__LINE__", (fun _env -> `Special);
+  "__FILE__", (fun _env -> ESpecial);
+  "__LINE__", (fun _env -> ESpecial);
   "STRINGIFY", (fun env ->
-                  `Defun (dummy_loc, "STRINGIFY",
+                  EDefun (dummy_loc, "STRINGIFY",
                           ["x"],
                           [`Stringify (`Ident (dummy_loc, "x", None))],
                           env)
                );
   "CONCAT", (fun env ->
-               `Defun (dummy_loc, "CONCAT",
+               EDefun (dummy_loc, "CONCAT",
                        ["x";"y"],
                        [`Concat (`Ident (dummy_loc, "x", None),
                                  `Ident (dummy_loc, "y", None))],
                        env)
             );
   "CAPITALIZE", (fun env ->
-    `Defun (dummy_loc, "CAPITALIZE",
+    EDefun (dummy_loc, "CAPITALIZE",
             ["x"],
             [`Capitalize (`Ident (dummy_loc, "x", None))],
             env)
@@ -33,7 +45,7 @@ let builtins = [
 let is_reserved s =
   List.exists (fun (s', _) -> s = s') builtins
 
-let builtin_env =
+let builtin_env : env =
   List.fold_left (fun env (s, f) -> M.add s (f env) env) M.empty builtins
 
 let line_directive buf pos =
@@ -141,10 +153,10 @@ let rec eval_ident env loc name =
   let l =
     try
       match M.find name env with
-      | `Def (_, _, l, _) -> l
-      | `Defun _ ->
+      | EDef (_, _, l, _) -> l
+      | EDefun _ ->
           error loc (sprintf "%S expects arguments" name)
-      | `Special -> assert false
+      | ESpecial -> assert false
     with Not_found -> error loc (sprintf "Undefined identifier %S" name)
   in
   let expansion_error () =
@@ -481,20 +493,20 @@ and expand_node ?(top = false) g env0 (x : node) =
                   `Text (loc, false, name ^ "(") :: List.flatten with_sep in
                 expand_list g env0 l
 
-            | Some (`Defun (_, _, arg_names, _, _)), None ->
+            | Some (EDefun (_, _, arg_names, _, _)), None ->
                 error loc
                   (sprintf "%S expects %i arguments but is applied to none."
                      name (List.length arg_names))
 
-            | Some (`Def _), Some _ ->
+            | Some (EDef _), Some _ ->
                 error loc
                   (sprintf "%S expects no arguments" name)
 
-            | Some (`Def (_, _, l, env)), None ->
+            | Some (EDef (_, _, l, env)), None ->
                 ignore (expand_list g env l);
                 env0
 
-            | Some (`Defun (_, _, arg_names, l, env)), Some args ->
+            | Some (EDefun (_, _, arg_names, l, env)), Some args ->
                 let argc = List.length arg_names in
                 let n = List.length args in
                 let args =
@@ -512,13 +524,13 @@ and expand_node ?(top = false) g env0 (x : node) =
                   let app_env =
                     List.fold_left2 (
                       fun env name l ->
-                        M.add name (`Def (loc, name, l, env0)) env
+                        M.add name (EDef (loc, name, l, env0)) env
                     ) env arg_names args
                   in
                   ignore (expand_list g app_env l);
                   env0
 
-            | Some `Special, _ -> assert false
+            | Some ESpecial, _ -> assert false
         in
 
         if def = None then
@@ -537,14 +549,14 @@ and expand_node ?(top = false) g env0 (x : node) =
         if M.mem name env0 then
           error loc (sprintf "%S is already defined" name)
         else
-          M.add name (`Def (loc, name, body, env0)) env0
+          M.add name (EDef (loc, name, body, env0)) env0
 
     | `Defun (loc, name, arg_names, body) ->
         g.require_location := true;
         if M.mem name env0 then
           error loc (sprintf "%S is already defined" name)
         else
-          M.add name (`Defun (loc, name, arg_names, body, env0)) env0
+          M.add name (EDefun (loc, name, arg_names, body, env0)) env0
 
     | `Undef (loc, name) ->
         g.require_location := true;
