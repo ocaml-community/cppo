@@ -8,8 +8,8 @@ module M = Map.Make (String)
 (* An environment entry. *)
 
 type entry =
-  | EDef   of loc * string               * node list * env
-  | EDefun of loc * string * string list * node list * env
+  | EDef   of loc * macro           * body * env
+  | EDefun of loc * macro * formals * body * env
   | ESpecial
 
 (* An environment is a map of (macro) names to environment entries. *)

@@ -6,10 +6,14 @@ module String_map = Map.Make (String)
 
 type loc = position * position
 
+(* The name of a macro. *)
+type macro =
+  string
+
 type bool_expr =
     [ `True
     | `False
-    | `Defined of string
+    | `Defined of macro
     | `Not of bool_expr (* not *)
     | `And of (bool_expr * bool_expr) (* && *)
     | `Or of (bool_expr * bool_expr) (* || *)
@@ -46,10 +50,10 @@ and arith_expr = (* signed int64 *)
     ]
 
 type node =
-    [ `Ident of (loc * string * node list list option)
-    | `Def of (loc * string * node list)
-    | `Defun of (loc * string * string list * node list)
-    | `Undef of (loc * string)
+    [ `Ident of (loc * string * actuals option)
+    | `Def of (loc * macro * body)
+    | `Defun of (loc * macro * formals * body)
+    | `Undef of (loc * macro)
     | `Include of (loc * string)
     | `Ext of (loc * string * string)
     | `Cond of (loc * bool_expr * node list * node list)
@@ -64,6 +68,25 @@ type node =
     | `Current_line of loc
     | `Current_file of loc ]
 
+(* One formal macro parameter. *)
+and formal =
+  string
+
+(* A tuple of formal macro parameters. *)
+and formals =
+  formal list
+
+(* One actual macro argument. *)
+and actual =
+  node list
+
+(* A tuple of actual macro arguments. *)
+and actuals =
+  actual list
+
+(* The body of a macro definition. *)
+and body =
+  node list
 
 
 let string_of_loc (pos1, pos2) =
