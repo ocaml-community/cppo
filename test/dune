@@ -1,3 +1,6 @@
+;; ---------------------------------------------------------------------------
+;; Positive tests.
+
 (rule
  (targets ext.out)
  (deps
@@ -83,6 +86,11 @@
    %{targets}
    (run %{bin:cppo} %{<}))))
 
+(rule
+ (targets lexical.out)
+ (deps (:< lexical.cppo))
+ (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
+
 (rule (alias runtest) (package cppo)
       (action (diff ext.ref ext.out)))
 
@@ -109,3 +117,54 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff test.ref test.out)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff lexical.ref lexical.out)))
+
+;; ---------------------------------------------------------------------------
+;; Negative tests.
+
+(rule
+ (targets arity_mismatch.err)
+ (deps (:< arity_mismatch.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff arity_mismatch.ref arity_mismatch.err)))
+
+(rule
+ (targets applied_to_none.err)
+ (deps (:< applied_to_none.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff applied_to_none.ref applied_to_none.err)))
+
+(rule
+ (targets expects_no_args.err)
+ (deps (:< expects_no_args.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff expects_no_args.ref expects_no_args.err)))
+
+(rule
+ (targets already_defined.err)
+ (deps (:< already_defined.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff already_defined.ref already_defined.err)))
+
+(rule
+ (targets at_least_one_arg.err)
+ (deps (:< at_least_one_arg.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff at_least_one_arg.ref at_least_one_arg.err)))
