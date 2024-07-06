@@ -10,7 +10,6 @@ module M = Map.Make (String)
 type entry =
   | EDef   of loc * macro           * body * env
   | EDefun of loc * macro * formals * body * env
-  | ESpecial
 
 (* An environment is a map of (macro) names to environment entries. *)
 
@@ -18,8 +17,6 @@ and env =
   entry M.t
 
 let builtins = [
-  "__FILE__", (fun _env -> ESpecial);
-  "__LINE__", (fun _env -> ESpecial);
   "STRINGIFY", (fun env ->
                   EDefun (dummy_loc, "STRINGIFY",
                           ["x"],
@@ -43,6 +40,8 @@ let builtins = [
 ]
 
 let is_reserved s =
+  s = "__FILE__" ||
+  s = "__LINE__" ||
   List.exists (fun (s', _) -> s = s') builtins
 
 let builtin_env : env =
@@ -156,7 +155,6 @@ let rec eval_ident env loc name =
       | EDef (_, _, l, _) -> l
       | EDefun _ ->
           error loc (sprintf "%S expects arguments" name)
-      | ESpecial -> assert false
     with Not_found -> error loc (sprintf "Undefined identifier %S" name)
   in
   let expansion_error () =
@@ -525,7 +523,6 @@ and expand_node ?(top = false) g env0 (x : node) =
                   ignore (expand_list g app_env l);
                   env0
 
-            | Some ESpecial, _ -> assert false
         in
 
         if def = None then
