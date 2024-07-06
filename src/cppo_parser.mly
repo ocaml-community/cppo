@@ -75,7 +75,7 @@ node:
 | TEXT          { `Text $1 }
 
 | IDENT         { let loc, name = $1 in
-                  `Ident (loc, name, None) }
+                  `Ident (loc, name, []) }
 
 | FUNIDENT args1 CL_PAREN
                 {
@@ -85,7 +85,8 @@ node:
                 *)
                   let (pos1, _), name = $1 in
                   let _, pos2 = $3 in
-                  `Ident ((pos1, pos2), name, Some $2) }
+                  assert ($2 <> []);
+                  `Ident ((pos1, pos2), name, $2) }
 | FUNIDENT error
                 { error (fst $1) "Invalid macro application" }
 

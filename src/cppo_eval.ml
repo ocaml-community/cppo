@@ -23,20 +23,20 @@ let builtins = [
   "STRINGIFY", (fun env ->
                   EDefun (dummy_loc, "STRINGIFY",
                           ["x"],
-                          [`Stringify (`Ident (dummy_loc, "x", None))],
+                          [`Stringify (`Ident (dummy_loc, "x", []))],
                           env)
                );
   "CONCAT", (fun env ->
                EDefun (dummy_loc, "CONCAT",
                        ["x";"y"],
-                       [`Concat (`Ident (dummy_loc, "x", None),
-                                 `Ident (dummy_loc, "y", None))],
+                       [`Concat (`Ident (dummy_loc, "x", []),
+                                 `Ident (dummy_loc, "y", []))],
                        env)
             );
   "CAPITALIZE", (fun env ->
     EDefun (dummy_loc, "CAPITALIZE",
             ["x"],
-            [`Capitalize (`Ident (dummy_loc, "x", None))],
+            [`Capitalize (`Ident (dummy_loc, "x", []))],
             env)
   );
 
@@ -169,7 +169,7 @@ or into a variable with the same properties."
   in
   (try
      match remove_space l with
-       [ `Ident (loc, name, None) ] ->
+       [ `Ident (loc, name, []) ] ->
          (* single identifier that we expand recursively *)
          eval_ident env loc name
      | _ ->
@@ -461,7 +461,7 @@ and expand_list ?(top = false) g env l =
 
 and expand_node ?(top = false) g env0 (x : node) =
   match x with
-      `Ident (loc, name, opt_args) ->
+      `Ident (loc, name, args) ->
 
         let def =
           try Some (M.find name env0)
@@ -488,10 +488,10 @@ and expand_node ?(top = false) g env0 (x : node) =
         );
 
         let env =
-          match def, opt_args with
-              None, None ->
+          match def, args with
+              None, [] ->
                 expand_node g env0 (`Text (loc, false, name))
-            | None, Some args ->
+            | None, _ :: _ ->
                 let with_sep =
                   add_sep
                     [`Text (loc, false, ",")]
@@ -501,20 +501,20 @@ and expand_node ?(top = false) g env0 (x : node) =
                   `Text (loc, false, name ^ "(") :: List.flatten with_sep in
                 expand_list g env0 l
 
-            | Some (EDefun (_, _, arg_names, _, _)), None ->
+            | Some (EDefun (_, _, arg_names, _, _)), [] ->
                 error loc
                   (sprintf "%S expects %i arguments but is applied to none."
                      name (List.length arg_names))
 
-            | Some (EDef _), Some _ ->
+            | Some (EDef _), _ :: _ ->
                 error loc
                   (sprintf "%S expects no arguments" name)
 
-            | Some (EDef (_, _, l, env)), None ->
+            | Some (EDef (_, _, l, env)), [] ->
                 ignore (expand_list g env l);
                 env0
 
-            | Some (EDefun (_, _, arg_names, l, env)), Some args ->
+            | Some (EDefun (_, _, arg_names, l, env)), _ :: _ ->
                 check_arity loc name arg_names args;
                   let app_env =
                     List.fold_left2 (

@@ -46,7 +46,9 @@ and arith_expr = (* signed int64 *)
     ]
 
 type node =
-    [ `Ident of (loc * string * actuals option)
+    [ `Ident of (loc * string * actuals)
+         (* the list [actuals] is empty if and only if no parentheses
+            are used at this macro invocation site. *)
     | `Def of (loc * macro * body)
     | `Defun of (loc * macro * formals * body)
     | `Undef of (loc * macro)
