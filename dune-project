@@ -1,4 +1,4 @@
-(lang dune 1.10)
+(lang dune 2.0)
 (name cppo)
 
 (generate_opam_files true)
@@ -15,7 +15,7 @@
  (name cppo)
  (depends
   (ocaml (>= 4.02.3))
-  (dune  (>= 1.10))
+  (dune  (>= 2.0))
    base-unix)
  (synopsis "Code preprocessor like cpp for OCaml")
  (description "Cppo is an equivalent of the C preprocessor for OCaml programs.
