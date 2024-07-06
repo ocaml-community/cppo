@@ -515,14 +515,6 @@ and expand_node ?(top = false) g env0 (x : node) =
                 env0
 
             | Some (EDefun (_, _, arg_names, l, env)), Some args ->
-                let argc = List.length arg_names in
-                let n = List.length args in
-                let args =
-                  (* it's ok to pass an empty arg if one arg
-                     is expected *)
-                  if n = 0 && argc = 1 then [[]]
-                  else args
-                in
                 check_arity loc name arg_names args;
                   let app_env =
                     List.fold_left2 (
