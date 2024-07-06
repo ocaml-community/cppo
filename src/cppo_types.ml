@@ -45,7 +45,7 @@ and arith_expr = (* signed int64 *)
     | `Lxor of (arith_expr * arith_expr) (* lxor *)
     ]
 
-and node =
+type node =
     [ `Ident of (loc * string * node list list option)
     | `Def of (loc * string * node list)
     | `Defun of (loc * string * string list * node list)
