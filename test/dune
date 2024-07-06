@@ -83,56 +83,29 @@
    %{targets}
    (run %{bin:cppo} %{<}))))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff ext.ref ext.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff ext.ref ext.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff comments.ref comments.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff comments.ref comments.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff cond.ref cond.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff cond.ref cond.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff tuple.ref tuple.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff tuple.ref tuple.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff loc.ref loc.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff loc.ref loc.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff paren_arg.ref paren_arg.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff paren_arg.ref paren_arg.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff version.ref version.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff version.ref version.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff unmatched.ref unmatched.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff unmatched.ref unmatched.out)))
 
-(alias
- (name runtest)
- (package cppo)
- (action
-  (diff test.ref test.out)))
+(rule (alias runtest) (package cppo)
+      (action (diff test.ref test.out)))
