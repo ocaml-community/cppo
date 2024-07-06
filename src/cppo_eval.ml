@@ -413,6 +413,14 @@ let expand_ext g loc id data =
     | _ ->
         failwith (sprintf "Command %S failed" cmd)
 
+let check_arity loc name (formals : _ list) (actuals : _ list) =
+  let formals = List.length formals
+  and actuals = List.length actuals in
+  if formals <> actuals then
+    sprintf "%S expects %i argument%s but is applied to %i argument%s."
+      name formals (plural formals) actuals (plural actuals)
+    |> error loc
+
 let rec include_file g loc rel_file env =
   let file =
     if not (Filename.is_relative rel_file) then
@@ -515,12 +523,7 @@ and expand_node ?(top = false) g env0 (x : node) =
                   if n = 0 && argc = 1 then [[]]
                   else args
                 in
-                if argc <> n then
-                  error loc
-                    (sprintf "%S expects %i argument%s but is applied to \
-                              %i argument%s."
-                       name argc (plural argc) n (plural n))
-                else
+                check_arity loc name arg_names args;
                   let app_env =
                     List.fold_left2 (
                       fun env name l ->
