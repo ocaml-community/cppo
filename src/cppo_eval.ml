@@ -11,9 +11,14 @@ let find_opt name env =
 
 (* An environment entry. *)
 
+(* In a macro definition [EDef (loc, formals, body, env)],
+
+   + [loc] is the location of the macro definition,
+   + [formals] is the list of formal parameters,
+   + [body] and [env] represent the closed body of the macro definition. *)
+
 type entry =
-  | EDef   of loc * macro           * body * env
-  | EDefun of loc * macro * formals * body * env
+  | EDef of loc * formals * body * env
 
 (* An environment is a map of (macro) names to environment entries. *)
 
@@ -23,22 +28,22 @@ and env =
 let ident x =
   `Ident (dummy_loc, x, [])
 
-let dummy_defun name formals body env =
-  EDefun (dummy_loc, name, formals, body, env)
+let dummy_defun formals body env =
+  EDef (dummy_loc, formals, body, env)
 
 let builtins : (string * (env -> entry)) list = [
   "STRINGIFY",
-  dummy_defun "STRINGIFY"
+  dummy_defun
     ["x"]
     [`Stringify (ident "x")]
   ;
   "CONCAT",
-  dummy_defun "CONCAT"
+  dummy_defun
     ["x";"y"]
     [`Concat (ident "x", ident "y")]
   ;
   "CAPITALIZE",
-  dummy_defun "CAPITALIZE"
+  dummy_defun
     ["x"]
     [`Capitalize (ident "x")]
   ;
@@ -171,11 +176,12 @@ let concat loc x y =
 let rec eval_ident env loc name =
   let l =
     match find_opt name env with
+    | Some (EDef (_loc, [], body, _env)) ->
+        body
+    | Some (EDef _) ->
+        error loc (sprintf "%S expects arguments" name)
     | None ->
         error loc (sprintf "Undefined identifier %S" name)
-    | Some (EDef (_, _, l, _)) -> l
-    | Some (EDefun _) ->
-        error loc (sprintf "%S expects arguments" name)
   in
   let expansion_error () =
     error loc
@@ -439,6 +445,19 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
       name formals (plural formals) actuals (plural actuals)
     |> error loc
 
+(* [bind_one formal (loc, actual, env) accu] binds one formal parameter
+   to one actual argument, extending the environment [accu]. This formal
+   parameter becomes an ordinary (unparameterized) macro. *)
+let bind_one formal (loc, actual, env) accu =
+  M.add formal (EDef (loc, [], actual, env)) accu
+
+(* [bind_many formals (loc, actuals, env) accu] a tuple of formal parameters
+   to a tuple of actual arguments, extending the environment [accu]. *)
+let bind_many formals (loc, actuals, env) accu =
+  List.fold_left2 (fun accu formal actual ->
+    bind_one formal (loc, actual, env) accu
+  ) accu formals actuals
+
 let rec include_file g loc rel_file env =
   let file =
     if not (Filename.is_relative rel_file) then
@@ -479,7 +498,7 @@ and expand_list ?(top = false) g env l =
 
 and expand_node ?(top = false) g env0 (x : node) =
   match x with
-      `Ident (loc, name, args) ->
+      `Ident (loc, name, actuals) ->
 
         let def = find_opt name env0 in
         let g =
@@ -503,37 +522,26 @@ and expand_node ?(top = false) g env0 (x : node) =
         );
 
         let env =
-          match def, args with
+          match def with
 
-          | None, _ ->
+          | None ->
               (* There is no definition for the macro [name], so this is not
                  a macro application after all. Transform it back into text,
                  and process it. *)
-              expand_list g env0 (text loc name args)
+              expand_list g env0 (text loc name actuals)
 
-            | Some (EDefun (_, _, arg_names, _, _)), [] ->
-                error loc
-                  (sprintf "%S expects %i arguments but is applied to none."
-                     name (List.length arg_names))
-
-            | Some (EDef _), _ :: _ ->
-                error loc
-                  (sprintf "%S expects no arguments" name)
-
-            | Some (EDef (_, _, l, env)), [] ->
-                ignore (expand_list g env l);
-                env0
-
-            | Some (EDefun (_, _, arg_names, l, env)), _ :: _ ->
-                check_arity loc name arg_names args;
-                  let app_env =
-                    List.fold_left2 (
-                      fun env name l ->
-                        M.add name (EDef (loc, name, l, env0)) env
-                    ) env arg_names args
-                  in
-                  ignore (expand_list g app_env l);
-                  env0
+          | Some (EDef (_loc, formals, body, env)) ->
+              (* There is a definition for the macro [name], so this is a
+                 macro application. *)
+              check_arity loc name formals actuals;
+              (* Extend the macro's captured environment [env] with bindings of
+                 formals to actuals. Each actual captures the environment [env0]
+                 that exists here, at the macro application site. *)
+              let env = bind_many formals (loc, actuals, env0) env in
+              (* Process the macro's body in this extended environment. *)
+              let (_ : env) = expand_list g env body in
+              (* Continue with our original environment. *)
+              env0
 
         in
 
@@ -553,14 +561,14 @@ and expand_node ?(top = false) g env0 (x : node) =
         if M.mem name env0 then
           error loc (sprintf "%S is already defined" name)
         else
-          M.add name (EDef (loc, name, body, env0)) env0
+          M.add name (EDef (loc, [], body, env0)) env0
 
     | `Defun (loc, name, arg_names, body) ->
         g.require_location := true;
         if M.mem name env0 then
           error loc (sprintf "%S is already defined" name)
         else
-          M.add name (EDefun (loc, name, arg_names, body, env0)) env0
+          M.add name (EDef (loc, arg_names, body, env0)) env0
 
     | `Undef (loc, name) ->
         g.require_location := true;
