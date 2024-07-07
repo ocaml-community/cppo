@@ -200,12 +200,21 @@ and line e = parse
           token e lexbuf }
 
 and directive e = parse
-    blank* "define" dblank1 (ident as id) "("
-      { DEFUN (long_loc e, id) }
 
+  (* If #define <name> is immediately followed with an opening parenthesis
+     (without any blank space) then this is interpreted as a parameterized
+     macro definition. The formal parameters are parsed by the lexer. *)
+  | blank* "define" dblank1 (ident as id) "("
+      { let xs = formals [] lexbuf in
+        assert (xs <> []);
+        DEF (long_loc e, id, xs) }
+
+  (* If #define <name> is not followed with an opening parenthesis then this
+     is interpreted as an ordinary (non-parameterized) macro definition. *)
   | blank* "define" dblank1 (ident as id)
       { assert e.in_directive;
-        DEF (long_loc e, id) }
+        let xs = [] in
+        DEF (long_loc e, id, xs) }
 
   | blank* "undef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
@@ -697,6 +706,20 @@ and int_tuple_content = parse
   | space* (([^',' ')']#space)+ as s) space* ")" space* eof
                       { [Int64.of_string s] }
 
+(* [formals xs] recognizes a nonempty comma-separated list of formal macro
+   parameters, ended with a closing parenthesis. [xs] is the accumulator. *)
+and formals xs = parse
+  | blank*
+      { formals xs lexbuf }
+  | (ident as x) blank* ")"
+      { List.rev (x :: xs) }
+  | (ident as x) blank* ","
+      { formals (x :: xs) lexbuf }
+  | ")"
+      { lexer_error lexbuf "At least one argument is required" }
+  | _
+  | eof
+      { lexer_error lexbuf "Invalid argument list" }
 
 {
   let init ~preserve_quotations file lexbuf =

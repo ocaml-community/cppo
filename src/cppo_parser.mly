@@ -3,7 +3,8 @@
 %}
 
 /* Directives */
-%token < Cppo_types.loc * string > DEF DEFUN UNDEF INCLUDE WARNING ERROR
+%token < Cppo_types.loc * string > UNDEF INCLUDE WARNING ERROR
+%token < Cppo_types.loc * string * string list > DEF
 %token < Cppo_types.loc * string option * int > LINE
 %token < Cppo_types.loc * Cppo_types.bool_expr > IFDEF
 %token < Cppo_types.loc * string * string > EXT
@@ -101,35 +102,18 @@ node:
 | CURRENT_FILE  { `Current_file $1 }
 
 | DEF unode_list0 ENDEF
-                { let (pos1, _), name = $1 in
-
-                  (* Additional spacing is needed for cases like '+foo+'
-                     expanding into '++' instead of '+ +'. *)
-                  let safe_space = `Text ($3, true, " ") in
-
-                  let body = $2 @ [safe_space] in
-                  let _, pos2 = $3 in
-                  let formals = [] in
-                  `Def ((pos1, pos2), name, formals, body) }
-
-| DEFUN def_args1 CL_PAREN unode_list0 ENDEF
-                { let (pos1, _), name = $1 in
-                  let formals = $2 in
+                { let (pos1, _), name, formals = $1 in
 
                   (* Additional spacing is needed for cases like 'foo()bar'
                      where 'foo()' expands into 'abc', giving 'abcbar'
                      instead of 'abc bar';
                      Also needed for '+foo()+' expanding into '++' instead
                      of '+ +'. *)
-                  let safe_space = `Text ($5, true, " ") in
+                  let safe_space = `Text ($3, true, " ") in
 
-                  let body = $4 @ [safe_space] in
-                  let _, pos2 = $5 in
+                  let body = $2 @ [safe_space] in
+                  let _, pos2 = $3 in
                   `Def ((pos1, pos2), name, formals, body) }
-
-| DEFUN CL_PAREN
-                { error (fst (fst $1), snd $2)
-                    "At least one argument is required" }
 
 | UNDEF
                 { `Undef $1 }
@@ -205,20 +189,6 @@ pnode_or_comma_list0:
 | pnode pnode_or_comma_list0   { $1 :: $2 }
 | COMMA pnode_or_comma_list0   { `Text ($1, false, ",") :: $2 }
 |                              { [] }
-;
-
-def_args1:
-| arg_blank IDENT COMMA def_args1
-                               { (snd $2) :: $4 }
-| arg_blank IDENT              { [ snd $2 ] }
-;
-
-arg_blank:
-| TEXT arg_blank         { let loc, is_space, _s = $1 in
-                           if not is_space then
-                             error loc "Invalid argument list"
-                         }
-|                        { () }
 ;
 
 test:
