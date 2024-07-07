@@ -5,6 +5,10 @@ open Cppo_types
 module S = Set.Make (String)
 module M = Map.Make (String)
 
+let find_opt name env =
+  try Some (M.find name env)
+  with Not_found -> None
+
 (* An environment entry. *)
 
 type entry =
@@ -151,12 +155,12 @@ let concat loc x y =
 *)
 let rec eval_ident env loc name =
   let l =
-    try
-      match M.find name env with
-      | EDef (_, _, l, _) -> l
-      | EDefun _ ->
-          error loc (sprintf "%S expects arguments" name)
-    with Not_found -> error loc (sprintf "Undefined identifier %S" name)
+    match find_opt name env with
+    | None ->
+        error loc (sprintf "Undefined identifier %S" name)
+    | Some (EDef (_, _, l, _)) -> l
+    | Some (EDefun _) ->
+        error loc (sprintf "%S expects arguments" name)
   in
   let expansion_error () =
     error loc
@@ -462,10 +466,7 @@ and expand_node ?(top = false) g env0 (x : node) =
   match x with
       `Ident (loc, name, args) ->
 
-        let def =
-          try Some (M.find name env0)
-          with Not_found -> None
-        in
+        let def = find_opt name env0 in
         let g =
           if top && def <> None || g.call_loc == dummy_loc then
             { g with call_loc = loc }
