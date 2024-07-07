@@ -16,27 +16,28 @@ type entry =
 and env =
   entry M.t
 
-let builtins = [
-  "STRINGIFY", (fun env ->
-                  EDefun (dummy_loc, "STRINGIFY",
-                          ["x"],
-                          [`Stringify (`Ident (dummy_loc, "x", []))],
-                          env)
-               );
-  "CONCAT", (fun env ->
-               EDefun (dummy_loc, "CONCAT",
-                       ["x";"y"],
-                       [`Concat (`Ident (dummy_loc, "x", []),
-                                 `Ident (dummy_loc, "y", []))],
-                       env)
-            );
-  "CAPITALIZE", (fun env ->
-    EDefun (dummy_loc, "CAPITALIZE",
-            ["x"],
-            [`Capitalize (`Ident (dummy_loc, "x", []))],
-            env)
-  );
+let ident x =
+  `Ident (dummy_loc, x, [])
 
+let dummy_defun name formals body env =
+  EDefun (dummy_loc, name, formals, body, env)
+
+let builtins : (string * (env -> entry)) list = [
+  "STRINGIFY",
+  dummy_defun "STRINGIFY"
+    ["x"]
+    [`Stringify (ident "x")]
+  ;
+  "CONCAT",
+  dummy_defun "CONCAT"
+    ["x";"y"]
+    [`Concat (ident "x", ident "y")]
+  ;
+  "CAPITALIZE",
+  dummy_defun "CAPITALIZE"
+    ["x"]
+    [`Capitalize (ident "x")]
+  ;
 ]
 
 let is_reserved s =
