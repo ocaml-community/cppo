@@ -66,6 +66,21 @@ let rec add_sep sep last = function
   | [x] -> [ x; last ]
   | x :: l -> x :: sep :: add_sep sep last l
 
+(* Transform a list of actual macro arguments back into ordinary text,
+   after discovering that they are not macro arguments after all. *)
+let text loc name actuals : node list =
+  match actuals with
+  | [] ->
+      [`Text (loc, false, name)]
+  | _ :: _ ->
+      let with_sep =
+        add_sep
+          [`Text (loc, false, ",")]
+          [`Text (loc, false, ")")]
+          actuals
+      in
+      `Text (loc, false, name ^ "(") ::
+      List.flatten with_sep
 
 let remove_space l =
   List.filter (function `Text (_, true, _) -> false | _ -> true) l
@@ -489,17 +504,12 @@ and expand_node ?(top = false) g env0 (x : node) =
 
         let env =
           match def, args with
-              None, [] ->
-                expand_node g env0 (`Text (loc, false, name))
-            | None, _ :: _ ->
-                let with_sep =
-                  add_sep
-                    [`Text (loc, false, ",")]
-                    [`Text (loc, false, ")")]
-                    args in
-                let l =
-                  `Text (loc, false, name ^ "(") :: List.flatten with_sep in
-                expand_list g env0 l
+
+          | None, _ ->
+              (* There is no definition for the macro [name], so this is not
+                 a macro application after all. Transform it back into text,
+                 and process it. *)
+              expand_list g env0 (text loc name args)
 
             | Some (EDefun (_, _, arg_names, _, _)), [] ->
                 error loc
