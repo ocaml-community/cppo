@@ -168,3 +168,12 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff at_least_one_arg.ref at_least_one_arg.err)))
+
+(rule
+ (targets comment_in_formals.err)
+ (deps (:< comment_in_formals.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff comment_in_formals.ref comment_in_formals.err)))
