@@ -556,19 +556,12 @@ and expand_node ?(top = false) g env0 (x : node) =
         env
 
 
-    | `Def (loc, name, body)->
+    | `Def (loc, name, formals, body)->
         g.require_location := true;
         if M.mem name env0 then
           error loc (sprintf "%S is already defined" name)
         else
-          M.add name (EDef (loc, [], body, env0)) env0
-
-    | `Defun (loc, name, arg_names, body) ->
-        g.require_location := true;
-        if M.mem name env0 then
-          error loc (sprintf "%S is already defined" name)
-        else
-          M.add name (EDef (loc, arg_names, body, env0)) env0
+          M.add name (EDef (loc, formals, body, env0)) env0
 
     | `Undef (loc, name) ->
         g.require_location := true;

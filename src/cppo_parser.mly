@@ -102,11 +102,12 @@ node:
 
                   let body = $2 @ [safe_space] in
                   let _, pos2 = $3 in
-                  `Def ((pos1, pos2), name, body) }
+                  let formals = [] in
+                  `Def ((pos1, pos2), name, formals, body) }
 
 | DEFUN def_args1 CL_PAREN unode_list0 ENDEF
                 { let (pos1, _), name = $1 in
-                  let args = $2 in
+                  let formals = $2 in
 
                   (* Additional spacing is needed for cases like 'foo()bar'
                      where 'foo()' expands into 'abc', giving 'abcbar'
@@ -117,7 +118,7 @@ node:
 
                   let body = $4 @ [safe_space] in
                   let _, pos2 = $5 in
-                  `Defun ((pos1, pos2), name, args, body) }
+                  `Def ((pos1, pos2), name, formals, body) }
 
 | DEFUN CL_PAREN
                 { error (fst (fst $1), snd $2)

@@ -49,8 +49,9 @@ type node =
     [ `Ident of (loc * string * actuals)
          (* the list [actuals] is empty if and only if no parentheses
             are used at this macro invocation site. *)
-    | `Def of (loc * macro * body)
-    | `Defun of (loc * macro * formals * body)
+    | `Def of (loc * macro * formals * body)
+         (* the list [formals] is empty if and only if no parentheses
+            are used at this macro definition site. *)
     | `Undef of (loc * macro)
     | `Include of (loc * string)
     | `Ext of (loc * string * string)
