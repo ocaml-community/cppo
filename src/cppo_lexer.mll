@@ -205,7 +205,7 @@ and directive e = parse
      (without any blank space) then this is interpreted as a parameterized
      macro definition. The formal parameters are parsed by the lexer. *)
   | blank* "define" dblank1 (ident as id) "("
-      { let xs = formals [] lexbuf in
+      { let xs = formals1 lexbuf in
         assert (xs <> []);
         DEF (long_loc e, id, xs) }
 
@@ -706,20 +706,52 @@ and int_tuple_content = parse
   | space* (([^',' ')']#space)+ as s) space* ")" space* eof
                       { [Int64.of_string s] }
 
-(* [formals xs] recognizes a nonempty comma-separated list of formal macro
-   parameters, ended with a closing parenthesis. [xs] is the accumulator. *)
-and formals xs = parse
-  | blank*
-      { formals xs lexbuf }
-  | (ident as x) blank* ")"
-      { List.rev (x :: xs) }
-  | (ident as x) blank* ","
-      { formals (x :: xs) lexbuf }
+(* -------------------------------------------------------------------------- *)
+
+(* Lists of formal macro parameters. *)
+
+(* [formals1] recognizes a nonempty comma-separated list of formal macro
+   parameters, ended with a closing parenthesis. *)
+
+and formals1 = parse
+  | blank+
+      { formals1 lexbuf }
   | ")"
       { lexer_error lexbuf "A macro must have at least one formal parameter" }
+  | ""
+      { let x = formal lexbuf in
+        formals0 [x] lexbuf }
+
+(* [formals0 xs] recognizes a possibly empty list of comma-preceded formal
+   macro parameters, ended with a closing parenthesis.
+   [xs] is the accumulator. *)
+
+and formals0 xs = parse
+  | blank+
+      { formals0 xs lexbuf }
+  | ")"
+      { List.rev xs }
+  | ","
+      { let x = formal lexbuf in
+        formals0 (x :: xs) lexbuf }
+  | _
+  | eof
+      { lexer_error lexbuf "Invalid formal parameter list: expected ',' or ')'" }
+
+(* [formal] recognizes one formal macro parameter. *)
+
+and formal = parse
+  | blank+
+      { formal lexbuf }
+  | ident as x
+      { x }
   | _
   | eof
       { lexer_error lexbuf "Invalid formal parameter: expected an identifier" }
+
+(* -------------------------------------------------------------------------- *)
+
+(* Initialization. *)
 
 {
   let init ~preserve_quotations file lexbuf =
