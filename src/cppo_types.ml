@@ -10,6 +10,19 @@ type loc = position * position
 type macro =
   string
 
+(* The shape of a macro.
+
+   The abstract syntax of shapes is τ ::= [τ, ..., τ].
+   That is, a macro takes a tuple of parameters, each
+   of which has a shape. The length of of this tuple
+   can be zero: this is the base case. *)
+type shape =
+  | Shape of shape list
+
+(* The base shape. This is the shape of a basic macro,
+   which takes no parameters, and produces text. *)
+let base = Shape []
+
 type bool_expr =
     [ `True
     | `False
@@ -71,9 +84,11 @@ type node =
     | `Current_line of loc
     | `Current_file of loc ]
 
-(* One formal macro parameter. *)
+(* A formal macro parameter consists of an identifier (the name of this
+   parameter) and a shape (the shape of this parameter). In the concrete
+   syntax, if the shape is omitted, then the base shape is assumed. *)
 and formal =
-  string
+  string * shape
 
 (* A tuple of formal macro parameters. *)
 and formals =

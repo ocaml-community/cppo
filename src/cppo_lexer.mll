@@ -738,16 +738,50 @@ and formals0 xs = parse
   | eof
       { lexer_error lexbuf "Invalid formal parameter list: expected ',' or ')'" }
 
-(* [formal] recognizes one formal macro parameter. *)
+(* [formal] recognizes one formal macro parameter. It is either an identifier
+   [x] or an identifier annotated with a shape [x : sh]. *)
 
 and formal = parse
   | blank+
       { formal lexbuf }
+  | (ident as x) blank* ":"
+      { (x, shape lexbuf) }
   | ident as x
-      { x }
+      { (x, base) }
   | _
   | eof
       { lexer_error lexbuf "Invalid formal parameter: expected an identifier" }
+
+(* [shape] recognizes a shape. *)
+
+and shape = parse
+  | blank+
+      { shape lexbuf }
+  | "."
+      (* The base shape can be written [] but we also allow .
+         as a more readable alternative. *)
+      { base }
+  | "["
+      { Shape (shapes [] lexbuf) }
+  | _
+  | eof
+      { lexer_error lexbuf "Invalid shape: expected '.' or '[' or ']'" }
+      (* A closing square bracket is valid if an opening square bracket
+         has been entered. We could keep track of this via an additional
+         parameter, but that seems overkill. *)
+
+(* [shapes shs] recognizes a possibly empty list of shapes, ended with
+   a closing square bracket. There is no separator between shapes.
+   [shs] is the accumulator. *)
+
+and shapes shs = parse
+  | blank+
+      { shapes shs lexbuf }
+  | "]"
+      { List.rev shs }
+  | ""
+      { let sh = shape lexbuf in
+        shapes (sh :: shs) lexbuf }
 
 (* -------------------------------------------------------------------------- *)
 

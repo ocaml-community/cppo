@@ -25,11 +25,14 @@ type entry =
 and env =
   entry M.t
 
+let basic x : formal =
+  (x, base)
+
 let ident x =
   `Ident (dummy_loc, x, [])
 
 let dummy_defun formals body env =
-  EDef (dummy_loc, formals, body, env)
+  EDef (dummy_loc, List.map basic formals, body, env)
 
 let builtins : (string * (env -> entry)) list = [
   "STRINGIFY",
@@ -448,8 +451,8 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
 (* [bind_one formal (loc, actual, env) accu] binds one formal parameter
    to one actual argument, extending the environment [accu]. This formal
    parameter becomes an ordinary (unparameterized) macro. *)
-let bind_one formal (loc, actual, env) accu =
-  M.add formal (EDef (loc, [], actual, env)) accu
+let bind_one ((x, _shape) : formal) (loc, actual, env) accu =
+  M.add x (EDef (loc, [], actual, env)) accu
 
 (* [bind_many formals (loc, actuals, env) accu] binds a tuple of formal
    parameters to a tuple of actual arguments, extending the environment

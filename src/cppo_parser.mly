@@ -4,7 +4,7 @@
 
 /* Directives */
 %token < Cppo_types.loc * string > UNDEF INCLUDE WARNING ERROR
-%token < Cppo_types.loc * string * string list > DEF
+%token < Cppo_types.loc * string * (string * Cppo_types.shape) list > DEF
 %token < Cppo_types.loc * string option * int > LINE
 %token < Cppo_types.loc * Cppo_types.bool_expr > IFDEF
 %token < Cppo_types.loc * string * string > EXT
