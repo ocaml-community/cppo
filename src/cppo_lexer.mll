@@ -716,10 +716,10 @@ and formals xs = parse
   | (ident as x) blank* ","
       { formals (x :: xs) lexbuf }
   | ")"
-      { lexer_error lexbuf "At least one argument is required" }
+      { lexer_error lexbuf "A macro must have at least one formal parameter" }
   | _
   | eof
-      { lexer_error lexbuf "Invalid argument list" }
+      { lexer_error lexbuf "Invalid formal parameter: expected an identifier" }
 
 {
   let init ~preserve_quotations file lexbuf =
