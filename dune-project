@@ -33,7 +33,7 @@ Cppo is:
  (name cppo_ocamlbuild)
  (depends
    ocaml
-  (dune (>= 1.10))
+  (dune (>= 2.0))
    ocamlbuild
    ocamlfind)
  (synopsis "Plugin to use cppo with ocamlbuild")
