@@ -91,6 +91,11 @@
  (deps (:< lexical.cppo))
  (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
 
+(rule
+ (targets higher_order_macros.out)
+ (deps (:< higher_order_macros.cppo))
+ (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
+
 (rule (alias runtest) (package cppo)
       (action (diff ext.ref ext.out)))
 
@@ -120,6 +125,9 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff lexical.ref lexical.out)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff higher_order_macros.ref higher_order_macros.out)))
 
 ;; ---------------------------------------------------------------------------
 ;; Negative tests.
