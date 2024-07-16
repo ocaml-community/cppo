@@ -494,10 +494,30 @@ let check_shape loc expected provided =
     |> error loc
 
 (* [bind_one formal (loc, actual, env) accu] binds one formal parameter
-   to one actual argument, extending the environment [accu]. This formal
-   parameter becomes an ordinary (unparameterized) macro. *)
-let bind_one ((x, _shape) : formal) (loc, actual, env) accu =
-  M.add x (EDef (loc, [], actual, env)) accu
+   to one actual argument, extending the environment [accu]. *)
+let bind_one (formal : formal) (loc, actual, env) accu =
+  let (x : macro), (expected : shape) = formal in
+  (* Analyze the shape of this formal parameter. *)
+  match expected with
+  | Shape [] ->
+      (* This formal parameter has the base shape: it is an ordinary
+         parameter. It becomes an ordinary (unparameterized) macro:
+         the name [x] becomes bound to the closure [actual, env]. *)
+      M.add x (EDef (loc, [], actual, env)) accu
+  | _ ->
+      (* This formal parameter has a shape other than the base shape:
+         it is itself a parameterized macro. In that case, we expect
+         the actual parameter to be just a name [y]. *)
+      let loc, y = project_ident loc actual in
+      (* Check that the macro [y] exists, and fetch its definition. *)
+      let def = fetch loc y env in
+      (* Compute its shape. *)
+      let provided = entry_shape def in
+      (* Check that the shapes match. *)
+      check_shape loc expected provided;
+      (* Now bind [x] to the definition of [y]. *)
+      (* This is analogous to [let x = y] in OCaml. *)
+      M.add x def accu
 
 (* [bind_many formals (loc, actuals, env) accu] binds a tuple of formal
    parameters to a tuple of actual arguments, extending the environment
