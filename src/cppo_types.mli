@@ -115,3 +115,9 @@ val error : loc -> string -> _
 val warning : loc -> string -> unit
 
 val flatten_nodes : node list -> node list
+
+(* [node_loc] extracts the location of a node. *)
+val node_loc : node -> loc
+
+val is_whitespace_node : node -> bool
+val is_whitespace_body : body -> bool

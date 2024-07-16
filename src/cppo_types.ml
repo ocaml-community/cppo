@@ -153,3 +153,37 @@ and flatten_node (node: node): node list =
   match node with
   | `Seq (_loc, l) -> flatten_nodes l
   | x -> [x]
+
+let node_loc node =
+  match node with
+  | `Ident (loc, _, _)
+  | `Def (loc, _, _, _)
+  | `Undef (loc, _)
+  | `Include (loc, _)
+  | `Ext (loc, _, _)
+  | `Cond (loc, _, _, _)
+  | `Error (loc, _)
+  | `Warning (loc, _)
+  | `Text (loc, _, _)
+  | `Seq (loc, _)
+  | `Line (loc, _, _)
+  | `Current_line loc
+  | `Current_file loc
+      -> loc
+  | `Stringify _
+  | `Capitalize _
+  | `Concat (_, _)
+      -> dummy_loc
+           (* These cases are never produced by the parser. *)
+
+let rec is_whitespace_node node =
+  match node with
+  | `Text (_, is_whitespace, _) ->
+      is_whitespace
+  | `Seq (_loc, body) ->
+      is_whitespace_body body
+  | _ ->
+      false
+
+and is_whitespace_body body =
+  List.for_all is_whitespace_node body
