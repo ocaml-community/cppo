@@ -451,8 +451,9 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
 let bind_one formal (loc, actual, env) accu =
   M.add formal (EDef (loc, [], actual, env)) accu
 
-(* [bind_many formals (loc, actuals, env) accu] a tuple of formal parameters
-   to a tuple of actual arguments, extending the environment [accu]. *)
+(* [bind_many formals (loc, actuals, env) accu] binds a tuple of formal
+   parameters to a tuple of actual arguments, extending the environment
+   [accu]. *)
 let bind_many formals (loc, actuals, env) accu =
   List.fold_left2 (fun accu formal actual ->
     bind_one formal (loc, actual, env) accu
