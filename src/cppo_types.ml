@@ -19,6 +19,22 @@ type macro =
 type shape =
   | Shape of shape list
 
+(* Printing a shape. This code must be consistent with the shape
+   parser in [Cppo_lexer]. *)
+
+let rec print_shape (Shape shs) =
+  match shs with
+  | [] ->
+      (* As a special case, the base shape is ".". *)
+      "."
+  | _ ->
+      "[" ^ String.concat "" (List.map print_shape shs) ^ "]"
+
+(* Testing two shapes for equality. *)
+
+let same_shape : shape -> shape -> bool =
+  (=)
+
 (* The base shape. This is the shape of a basic macro,
    which takes no parameters, and produces text. *)
 let base = Shape []

@@ -19,6 +19,12 @@ type shape =
    which takes no parameters, and produces text. *)
 val base : shape
 
+(* Printing a shape. *)
+val print_shape : shape -> string
+
+(* Testing two shapes for equality. *)
+val same_shape : shape -> shape -> bool
+
 type bool_expr =
     [ `True
     | `False
