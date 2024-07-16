@@ -448,6 +448,51 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
       name formals (plural formals) actuals (plural actuals)
     |> error loc
 
+(* [project_ident loc body] checks that [body] is a single identifier,
+   possibly surrounded with whitespace, and returns this identifier as
+   well as its location. *)
+let rec project_ident loc (body : body) : loc * string =
+  match body with
+  | `Ident (loc, x, []) :: remainder
+    when is_whitespace_body remainder ->
+      loc, x
+  | node :: body
+    when is_whitespace_node node ->
+      let loc = node_loc node in
+      project_ident loc body
+  | node :: _ ->
+      let loc = node_loc node in
+      sprintf "The name of a macro is expected in this position"
+      |> error loc
+  | [] ->
+      sprintf "The name of a macro is expected in this position"
+      |> error loc
+
+(* [fetch loc x env] checks that the macro [x] exists in [env]
+   and fetches its definition.  *)
+let fetch loc (x : macro) env : entry =
+  match find_opt x env with
+  | None ->
+      sprintf "The macro '%s' is not defined" x
+      |> error loc
+  | Some def ->
+      def
+
+(* [entry_shape def] returns the shape of the macro that is defined
+   by the environment entry [def]. *)
+let entry_shape (entry : entry) : shape =
+  let EDef (_loc, formals, _body, _env) = entry in
+  Shape (List.map snd formals)
+
+(* [check_shape loc expected provided] checks that the shapes
+   [expected] and [provided] are equal. *)
+let check_shape loc expected provided =
+  if not (same_shape expected provided) then
+    sprintf "A macro of type %s was expected, but\n       \
+             a macro of type %s was provided"
+      (print_shape expected) (print_shape provided)
+    |> error loc
+
 (* [bind_one formal (loc, actual, env) accu] binds one formal parameter
    to one actual argument, extending the environment [accu]. This formal
    parameter becomes an ordinary (unparameterized) macro. *)
