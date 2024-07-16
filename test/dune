@@ -185,3 +185,39 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff comment_in_formals.ref comment_in_formals.err)))
+
+(rule
+ (targets arity_mismatch_indirect.err)
+ (deps (:< arity_mismatch_indirect.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff arity_mismatch_indirect.ref arity_mismatch_indirect.err)))
+
+(rule
+ (targets expect_ident.err)
+ (deps (:< expect_ident.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff expect_ident.ref expect_ident.err)))
+
+(rule
+ (targets undefined.err)
+ (deps (:< undefined.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff undefined.ref undefined.err)))
+
+(rule
+ (targets shape_mismatch.err)
+ (deps (:< shape_mismatch.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff shape_mismatch.ref shape_mismatch.err)))
