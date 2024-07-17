@@ -1,2 +1,2 @@
-Error: File "expect_ident_empty.cppo", line 4, characters 0-11
+Error: File "expect_ident_empty.cppo", line 4, characters 6-6
 Error: The name of a macro is expected in this position
