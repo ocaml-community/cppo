@@ -113,9 +113,13 @@ An important distinction with cpp is that only previously-defined
 macros are accessible. Defining, undefining or redefining a macro has
 no effect on how previous macros will expand.
 
-Macros can take arguments ("function-like macro" in the cpp
-jargon). Both in the definition (`#define`) and in macro application the
-opening parenthesis must stick to the macro's identifier:
+Macros can take arguments. That is, a macro can be parameterized;
+this is known as a "function-like macro" in `cpp` jargon.
+When a parameterized macro is defined
+and when it is applied,
+the opening parenthesis must stick to the macro's identifier:
+that is, there must be no space in between.
+For example, this text:
 
 ```ocaml
 #define debug(args) if !debugging then Printf.eprintf args else ()
@@ -129,7 +133,25 @@ is expanded into:
 if !debugging then Printf.eprintf "Testing %i" (1 + 1) else ()
 ```
 
-Here is a multiline macro definition. Newlines occurring between
+An ordinary macro, which takes no arguments, can be viewed as
+a parameterized macro that takes zero arguments. However, the
+syntax differs: when there is no argument, no parentheses are
+used; when there is at least one argument, parentheses must be used.
+Here is a summary of the valid syntaxes:
+
+```ocaml
+#define FOO 42      (* Definition of an ordinary macro *)
+FOO                 (* A use of an ordinary macro *)
+
+#define BAR() 42    (* Invalid! When parentheses are used,
+                       there must be at least one parameter *)
+
+#define BAR(x) 42+x (* Definition of a parameterized macro *)
+BAR(0)              (* A use of this parameterized macro *)
+BAR()               (* Another valid use -- the argument is empty *)
+```
+
+Here is a multi-line macro definition. Newlines occurring between
 tokens must be protected by a backslash:
 
 ```ocaml
