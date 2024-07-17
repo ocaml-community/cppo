@@ -87,18 +87,6 @@ let text loc name (actuals : actuals) : node list =
         (`Text (loc, false, ")"))
         actuals
 
-let remove_whitespace_nodes (nodes : node list) : node list =
-  List.filter (fun node -> not (is_whitespace_node node)) nodes
-
-(* [remove_space] dissolves a body into a list of nodes
-   and filters out the whitespace nodes. *)
-let remove_space (body : body) : node list =
-  match body with
-  | `Seq (_loc, nodes) ->
-      remove_whitespace_nodes nodes
-  | _ ->
-      remove_whitespace_nodes [body]
-
 let trim_and_compact buf s =
   let started = ref false in
   let need_space = ref false in
@@ -211,11 +199,11 @@ let rec eval_ident env loc name =
         error loc (sprintf "Undefined identifier %S" name)
   in
   (try
-     match remove_space body with
-       [ `Ident (loc, name, []) ] ->
+     match node_is_ident body with
+     | Some (loc, name) ->
          (* single identifier that we expand recursively *)
          eval_ident env loc name
-     | _ ->
+     | None ->
          (* int literal or int tuple literal; variables not allowed *)
          let s = int_expansion loc name body in
          (match Cppo_lexer.int_tuple_of_string s with
@@ -456,34 +444,16 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
       name formals (plural formals) actuals (plural actuals)
     |> error loc
 
-(* [ident_of_nodes loc nodes] checks that [nodes] is a single identifier,
-   possibly surrounded with whitespace, and returns this identifier as
-   well as its location. *)
-let rec ident_of_nodes loc (nodes : node list) : loc * string =
-  match nodes with
-  | `Ident (loc, x, []) :: remainder
-    when is_whitespace_nodes remainder ->
+(* [macro_of_node node] checks that [node] is a single identifier,
+   possibly surrounded with whitespace, and returns this identifier
+   as well as its location. *)
+let macro_of_node (node : node) : loc * macro =
+  match node_is_ident node with
+  | Some (loc, x) ->
       loc, x
-  | node :: nodes
-    when is_whitespace_node node ->
-      ident_of_nodes loc nodes
-  | _ ->
+  | None ->
       sprintf "The name of a macro is expected in this position"
-      |> error loc
-
-(* [ident_of_node node] checks that [node] is a single identifier,
-   possibly surrounded with whitespace, and returns this identifier as
-   well as its location. *)
-let ident_of_node (node : node) : loc * string =
-  match node with
-  | `Ident (loc, x, []) ->
-      loc, x
-  | `Seq (loc, nodes) ->
-      ident_of_nodes loc nodes
-  | _ ->
-      let loc = node_loc node in
-      sprintf "The name of a macro is expected in this position"
-      |> error loc
+      |> error (node_loc node)
 
 (* [fetch loc x env] checks that the macro [x] exists in [env]
    and fetches its definition.  *)
@@ -525,7 +495,7 @@ let bind_one (formal : formal) (loc, actual, env) accu =
       (* This formal parameter has a shape other than the base shape:
          it is itself a parameterized macro. In that case, we expect
          the actual parameter to be just a name [y]. *)
-      let loc, y = ident_of_node actual in
+      let loc, y = macro_of_node actual in
       (* Check that the macro [y] exists, and fetch its definition. *)
       let def = fetch loc y env in
       (* Compute its shape. *)
