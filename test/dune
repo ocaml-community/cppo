@@ -230,3 +230,12 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff shape_mismatch.ref shape_mismatch.err)))
+
+(rule
+ (targets int_expansion_error.err)
+ (deps (:< int_expansion_error.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff int_expansion_error.ref int_expansion_error.err)))
