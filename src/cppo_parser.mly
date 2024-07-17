@@ -65,9 +65,13 @@ unode:
 pnode:
 | node          { $1 }
 | OP_PAREN pnode_or_comma_list0 CL_PAREN
-                { `Seq [`Text ($1, false, "(");
-                        `Seq $2;
-                        `Text ($3, false, ")")] }
+                { let nodes =
+                    `Text ($1, false, "(") ::
+                    $2 @
+                    `Text ($3, false, ")") ::
+                    []
+                  in
+                  `Seq nodes }
 ;
 
 /* node without parentheses handling (need to use unode or pnode) */
