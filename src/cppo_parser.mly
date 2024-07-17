@@ -54,6 +54,13 @@ pnode_list0:
 |                    { [] }
 ;
 
+actual:
+| pnode_list0        { let pos1 = Parsing.symbol_start_pos()
+                       and pos2 = Parsing.symbol_end_pos() in
+                       let loc = (pos1, pos2) in
+                       `Seq (loc, $1) }
+;
+
 /* node in which opening and closing parentheses don't need to match */
 unode:
 | node          { $1 }
@@ -85,7 +92,7 @@ node:
 | IDENT         { let loc, name = $1 in
                   `Ident (loc, name, []) }
 
-| FUNIDENT args1 CL_PAREN
+| FUNIDENT actuals1 CL_PAREN
                 {
                 (* macro application that receives at least one argument,
                    possibly empty.  We cannot distinguish syntactically between
@@ -180,9 +187,9 @@ elif_list:
 |                  { [] }
 ;
 
-args1:
-  pnode_list0 COMMA args1   { $1 :: $3  }
-| pnode_list0               { [ $1 ] }
+actuals1:
+  actual COMMA actuals1 { $1 :: $3  }
+| actual                { [ $1 ] }
 ;
 
 pnode_or_comma_list0:

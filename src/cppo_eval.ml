@@ -76,19 +76,16 @@ let rec add_sep sep last = function
 
 (* Transform a list of actual macro arguments back into ordinary text,
    after discovering that they are not macro arguments after all. *)
-let text loc name actuals : node list =
+let text loc name (actuals : actuals) : node list =
   match actuals with
   | [] ->
       [`Text (loc, false, name)]
   | _ :: _ ->
-      let with_sep =
-        add_sep
-          [`Text (loc, false, ",")]
-          [`Text (loc, false, ")")]
-          actuals
-      in
       `Text (loc, false, name ^ "(") ::
-      List.flatten with_sep
+      add_sep
+        (`Text (loc, false, ","))
+        (`Text (loc, false, ")"))
+        actuals
 
 let remove_space l =
   List.filter (function `Text (_, true, _) -> false | _ -> true) l
@@ -448,23 +445,32 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
       name formals (plural formals) actuals (plural actuals)
     |> error loc
 
-(* [project_ident loc body] checks that [body] is a single identifier,
+(* [ident_of_body loc body] checks that [body] is a single identifier,
    possibly surrounded with whitespace, and returns this identifier as
    well as its location. *)
-let rec project_ident loc (body : body) : loc * string =
+let rec ident_of_body loc (body : body) : loc * string =
   match body with
   | `Ident (loc, x, []) :: remainder
     when is_whitespace_body remainder ->
       loc, x
   | node :: body
     when is_whitespace_node node ->
-      let loc = node_loc node in
-      project_ident loc body
-  | node :: _ ->
-      let loc = node_loc node in
+      ident_of_body loc body
+  | _ ->
       sprintf "The name of a macro is expected in this position"
       |> error loc
-  | [] ->
+
+(* [ident_of_node node] checks that [node] is a single identifier,
+   possibly surrounded with whitespace, and returns this identifier as
+   well as its location. *)
+let ident_of_node (node : node) : loc * string =
+  match node with
+  | `Ident (loc, x, []) ->
+      loc, x
+  | `Seq (loc, body) ->
+      ident_of_body loc body
+  | _ ->
+      let loc = node_loc node in
       sprintf "The name of a macro is expected in this position"
       |> error loc
 
@@ -503,12 +509,13 @@ let bind_one (formal : formal) (loc, actual, env) accu =
       (* This formal parameter has the base shape: it is an ordinary
          parameter. It becomes an ordinary (unparameterized) macro:
          the name [x] becomes bound to the closure [actual, env]. *)
-      M.add x (EDef (loc, [], actual, env)) accu
+      let body = [actual] in
+      M.add x (EDef (loc, [], body, env)) accu
   | _ ->
       (* This formal parameter has a shape other than the base shape:
          it is itself a parameterized macro. In that case, we expect
          the actual parameter to be just a name [y]. *)
-      let loc, y = project_ident loc actual in
+      let loc, y = ident_of_node actual in
       (* Check that the macro [y] exists, and fetch its definition. *)
       let def = fetch loc y env in
       (* Compute its shape. *)

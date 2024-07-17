@@ -98,7 +98,7 @@ and formals =
 
 (* One actual macro argument. *)
 and actual =
-  node list
+  node
 
 (* A tuple of actual macro arguments. *)
 and actuals =
