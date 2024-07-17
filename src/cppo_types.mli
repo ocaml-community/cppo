@@ -120,3 +120,8 @@ val node_loc : node -> loc
 (* [is_whitespace_node] determines whether a node is just whitespace. *)
 val is_whitespace_node : node -> bool
 val is_whitespace_nodes : node list -> bool
+
+(* [node_is_ident node] tests whether [node] is a single identifier,
+   possibly surrounded with whitespace, and (if successful) returns
+   this identifier as well as its location. *)
+val node_is_ident : node -> (loc * string) option

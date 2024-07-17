@@ -179,3 +179,23 @@ let rec is_whitespace_node node =
 
 and is_whitespace_nodes nodes =
   List.for_all is_whitespace_node nodes
+
+let is_not_whitespace_node node =
+  not (is_whitespace_node node)
+
+let dissolve (node : node) : node list =
+  match node with
+  | `Seq (_loc, nodes) ->
+      nodes
+  | _ ->
+      [node]
+
+let nodes_are_ident (nodes : node list) : (loc * string) option =
+  match List.filter is_not_whitespace_node nodes with
+  | [`Ident (loc, x, [])] ->
+      Some (loc, x)
+  | _ ->
+      None
+
+let node_is_ident (node : node) : (loc * string) option =
+  nodes_are_ident (dissolve node)
