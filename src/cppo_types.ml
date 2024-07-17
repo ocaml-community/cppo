@@ -146,14 +146,6 @@ let warning loc s =
 
 let dummy_loc = (Lexing.dummy_pos, Lexing.dummy_pos)
 
-let rec flatten_nodes (l: node list): node list =
-  List.flatten (List.map flatten_node l)
-
-and flatten_node (node: node): node list =
-  match node with
-  | `Seq (_loc, l) -> flatten_nodes l
-  | x -> [x]
-
 let node_loc node =
   match node with
   | `Ident (loc, _, _)
