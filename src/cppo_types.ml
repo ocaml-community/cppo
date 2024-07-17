@@ -63,7 +63,7 @@ type node =
     | `Error of (loc * string)
     | `Warning of (loc * string)
     | `Text of (loc * bool * string) (* bool is true for space tokens *)
-    | `Seq of node list
+    | `Seq of (loc * node list)
     | `Stringify of node
     | `Capitalize of node
     | `Concat of (node * node)
@@ -120,5 +120,5 @@ let rec flatten_nodes (l: node list): node list =
 
 and flatten_node (node: node): node list =
   match node with
-  | `Seq l -> flatten_nodes l
+  | `Seq (_loc, l) -> flatten_nodes l
   | x -> [x]

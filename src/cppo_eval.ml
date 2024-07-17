@@ -609,7 +609,7 @@ and expand_node ?(top = false) g env0 (x : node) =
         Buffer.add_string g.buf s;
         env0
 
-    | `Seq l ->
+    | `Seq (_loc, l) ->
         expand_list g env0 l
 
     | `Stringify x ->

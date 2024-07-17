@@ -71,7 +71,10 @@ pnode:
                     `Text ($3, false, ")") ::
                     []
                   in
-                  `Seq nodes }
+                  let pos1, _ = $1
+                  and _, pos2 = $3 in
+                  let loc = (pos1, pos2) in
+                  `Seq (loc, nodes) }
 ;
 
 /* node without parentheses handling (need to use unode or pnode) */

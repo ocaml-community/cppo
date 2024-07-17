@@ -59,7 +59,7 @@ type node =
     | `Error of (loc * string)
     | `Warning of (loc * string)
     | `Text of (loc * bool * string) (* bool is true for space tokens *)
-    | `Seq of node list
+    | `Seq of (loc * node list)
     | `Stringify of node
     | `Capitalize of node
     | `Concat of (node * node)
