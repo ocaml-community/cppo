@@ -180,6 +180,72 @@ cppo -D 'VERSION 1.0' example.ml
 ocamlopt -c -pp "cppo -D 'VERSION 1.0'" example.ml
 ```
 
+Higher-Order Macros
+-------------------
+A parameterized macro can take a parameterized macro as a parameter:
+this is known as a higher-order macro.
+
+To enable this feature, some annotations are required:
+when a macro parameter is itself a parameterized macro,
+it must be annotated with its type.
+
+A macro takes *n* arguments (where *n* can be zero)
+and returns a piece of text.
+So, to describe the type of a macro, it suffices to
+describe the types of its *n* arguments.
+
+Thus, the syntax of types is
+`τ ::= [τ ... τ]`.
+That is, a type is a sequence of *n* types,
+  without separators,
+surrounded with square brackets.
+An ordinary macro,
+which takes zero parameters,
+has type `[]`.
+This is the base type: in other words, it is the type of text.
+For greater readability,
+this type can also be written in the form of a single period, `.`.
+Here are a few examples of types:
+
+```ocaml
+  .       (* An ordinary unparameterized macro: in other words, text    *)
+  []      (* Same as above.                                             *)
+  [.]     (* A parameterized macro that expects one piece of text       *)
+  [..]    (* A parameterized macro that expects two pieces of text      *)
+  [[.].]  (* A parameterized macro
+             whose first parameter is a parameterized macro of type [.]
+             and whose second parameter is a piece of text              *)
+```
+
+In the definition of a parameterized macro `M`,
+each parameter `X` can be annotated with a type
+by writing `X : τ`.
+This is optional: if no annotation is provided,
+the base type `.` is assumed.
+If a parameter `X` is annotated with a type `τ` other than the base type,
+then, when the parameterized macro `M` is applied,
+the actual argument `Y` that is supplied as an instance for `X`
+must be the name of a macro of type `τ`.
+
+This is more easily explained via an example. In the following code,
+
+```ocaml
+#define TWICE(e)          (e + e)
+#define APPLY(F : [.], e) (let x = (e) in F(x))
+let forty_two =
+  APPLY(TWICE,1+2+3+4+5+6)
+```
+
+`TWICE` is a parameterized macro of type `[.]`, and
+`APPLY` is a higher-order macro, whose type is `[[.].]`.
+Thus, the application `APPLY(TWICE, ...)` is valid.
+This code is expanded into:
+
+```
+let forty_two =
+   (let x = (1+2+3+4+5+6) in (x + x))
+```
+
 Conditionals
 ------------
 
