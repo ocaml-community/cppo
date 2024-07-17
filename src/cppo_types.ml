@@ -120,7 +120,7 @@ and actuals =
 
 (* The body of a macro definition. *)
 and body =
-  node list
+  node
 
 
 let string_of_loc (pos1, pos2) =
@@ -180,10 +180,10 @@ let rec is_whitespace_node node =
   match node with
   | `Text (_, is_whitespace, _) ->
       is_whitespace
-  | `Seq (_loc, body) ->
-      is_whitespace_body body
+  | `Seq (_loc, nodes) ->
+      is_whitespace_nodes nodes
   | _ ->
       false
 
-and is_whitespace_body body =
-  List.for_all is_whitespace_node body
+and is_whitespace_nodes nodes =
+  List.for_all is_whitespace_node nodes

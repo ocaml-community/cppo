@@ -49,6 +49,13 @@ unode_list0:
 |                    { [] }
 ;
 
+body:
+| unode_list0
+    { let pos1 = Parsing.symbol_start_pos()
+      and pos2 = Parsing.symbol_end_pos() in
+      let loc = (pos1, pos2) in
+      (loc, $1) }
+
 pnode_list0:
 | pnode pnode_list0  { $1 :: $2 }
 |                    { [] }
@@ -108,17 +115,17 @@ node:
 | CURRENT_LINE  { `Current_line $1 }
 | CURRENT_FILE  { `Current_file $1 }
 
-| DEF unode_list0 ENDEF
+| DEF body ENDEF
                 { let (pos1, _), name, formals = $1 in
-
+                  let loc, body = $2 in
                   (* Additional spacing is needed for cases like 'foo()bar'
                      where 'foo()' expands into 'abc', giving 'abcbar'
                      instead of 'abc bar';
                      Also needed for '+foo()+' expanding into '++' instead
                      of '+ +'. *)
                   let safe_space = `Text ($3, true, " ") in
-
-                  let body = $2 @ [safe_space] in
+                  let body = body @ [safe_space] in
+                  let body = `Seq (loc, body) in
                   let _, pos2 = $3 in
                   `Def ((pos1, pos2), name, formals, body) }
 

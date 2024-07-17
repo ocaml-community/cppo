@@ -38,17 +38,17 @@ let builtins : (string * (env -> entry)) list = [
   "STRINGIFY",
   dummy_defun
     ["x"]
-    [`Stringify (ident "x")]
+    (`Stringify (ident "x"))
   ;
   "CONCAT",
   dummy_defun
     ["x";"y"]
-    [`Concat (ident "x", ident "y")]
+    (`Concat (ident "x", ident "y"))
   ;
   "CAPITALIZE",
   dummy_defun
     ["x"]
-    [`Capitalize (ident "x")]
+    (`Capitalize (ident "x"))
   ;
 ]
 
@@ -87,8 +87,17 @@ let text loc name (actuals : actuals) : node list =
         (`Text (loc, false, ")"))
         actuals
 
-let remove_space l =
-  List.filter (function `Text (_, true, _) -> false | _ -> true) l
+let remove_whitespace_nodes (nodes : node list) : node list =
+  List.filter (fun node -> not (is_whitespace_node node)) nodes
+
+(* [remove_space] dissolves a body into a list of nodes
+   and filters out the whitespace nodes. *)
+let remove_space (body : body) : node list =
+  match body with
+  | `Seq (_loc, nodes) ->
+      remove_whitespace_nodes nodes
+  | _ ->
+      remove_whitespace_nodes [body]
 
 let trim_and_compact buf s =
   let started = ref false in
@@ -153,6 +162,24 @@ let concat loc x y =
     if s = "" then " "
     else " " ^ s ^ " "
 
+let int_expansion_error loc name =
+    error loc
+      (sprintf "\
+Variable %s found in cppo boolean expression must expand
+into an int literal, into a tuple of int literals,
+or into a variable with the same properties."
+         name)
+
+let rec int_expansion loc name (node : node) : string =
+  match node with
+  | `Text (_loc, _is_space, s) ->
+      s
+  | `Seq (_loc, nodes) ->
+      List.map (int_expansion loc name) nodes
+      |> String.concat ""
+  | _ ->
+      int_expansion_error loc name
+
 (*
    Expand the contents of a variable used in a boolean expression.
 
@@ -174,7 +201,7 @@ let concat loc x y =
    - x, where x expands into 123.
 *)
 let rec eval_ident env loc name =
-  let l =
+  let body =
     match find_opt name env with
     | Some (EDef (_loc, [], body, _env)) ->
         body
@@ -183,38 +210,22 @@ let rec eval_ident env loc name =
     | None ->
         error loc (sprintf "Undefined identifier %S" name)
   in
-  let expansion_error () =
-    error loc
-      (sprintf "\
-Variable %s found in cppo boolean expression must expand
-into an int literal, into a tuple of int literals,
-or into a variable with the same properties."
-         name)
-  in
   (try
-     match remove_space l with
+     match remove_space body with
        [ `Ident (loc, name, []) ] ->
          (* single identifier that we expand recursively *)
          eval_ident env loc name
      | _ ->
          (* int literal or int tuple literal; variables not allowed *)
-         let text =
-           List.map (
-             function
-               `Text (_, _is_space, s) -> s
-             | _ ->
-                 expansion_error ()
-           ) (Cppo_types.flatten_nodes l)
-         in
-         let s = String.concat "" text in
+         let s = int_expansion loc name body in
          (match Cppo_lexer.int_tuple_of_string s with
             Some [i] -> `Int i
           | Some l -> `Tuple (loc, List.map (fun i -> `Int i) l)
           | None ->
-              expansion_error ()
+              int_expansion_error loc name
          )
    with Cppo_error _ ->
-     expansion_error ()
+     int_expansion_error loc name
   )
 
 let rec replace_idents env (x : arith_expr) : arith_expr =
@@ -445,17 +456,17 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
       name formals (plural formals) actuals (plural actuals)
     |> error loc
 
-(* [ident_of_body loc body] checks that [body] is a single identifier,
+(* [ident_of_nodes loc nodes] checks that [nodes] is a single identifier,
    possibly surrounded with whitespace, and returns this identifier as
    well as its location. *)
-let rec ident_of_body loc (body : body) : loc * string =
-  match body with
+let rec ident_of_nodes loc (nodes : node list) : loc * string =
+  match nodes with
   | `Ident (loc, x, []) :: remainder
-    when is_whitespace_body remainder ->
+    when is_whitespace_nodes remainder ->
       loc, x
-  | node :: body
+  | node :: nodes
     when is_whitespace_node node ->
-      ident_of_body loc body
+      ident_of_nodes loc nodes
   | _ ->
       sprintf "The name of a macro is expected in this position"
       |> error loc
@@ -467,8 +478,8 @@ let ident_of_node (node : node) : loc * string =
   match node with
   | `Ident (loc, x, []) ->
       loc, x
-  | `Seq (loc, body) ->
-      ident_of_body loc body
+  | `Seq (loc, nodes) ->
+      ident_of_nodes loc nodes
   | _ ->
       let loc = node_loc node in
       sprintf "The name of a macro is expected in this position"
@@ -509,8 +520,7 @@ let bind_one (formal : formal) (loc, actual, env) accu =
       (* This formal parameter has the base shape: it is an ordinary
          parameter. It becomes an ordinary (unparameterized) macro:
          the name [x] becomes bound to the closure [actual, env]. *)
-      let body = [actual] in
-      M.add x (EDef (loc, [], body, env)) accu
+      M.add x (EDef (loc, [], actual, env)) accu
   | _ ->
       (* This formal parameter has a shape other than the base shape:
          it is itself a parameterized macro. In that case, we expect
@@ -615,7 +625,7 @@ and expand_node ?(top = false) g env0 (x : node) =
                  that exists here, at the macro application site. *)
               let env = bind_many formals (loc, actuals, env0) env in
               (* Process the macro's body in this extended environment. *)
-              let (_ : env) = expand_list g env body in
+              let (_ : env) = expand_node g env body in
               (* Continue with our original environment. *)
               env0
 

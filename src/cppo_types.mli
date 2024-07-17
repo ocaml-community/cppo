@@ -106,7 +106,7 @@ and actuals =
 
 (* The body of a macro definition. *)
 and body =
-  node list
+  node
 
 val dummy_loc : loc
 
@@ -119,5 +119,6 @@ val flatten_nodes : node list -> node list
 (* [node_loc] extracts the location of a node. *)
 val node_loc : node -> loc
 
+(* [is_whitespace_node] determines whether a node is just whitespace. *)
 val is_whitespace_node : node -> bool
-val is_whitespace_body : body -> bool
+val is_whitespace_nodes : node list -> bool
