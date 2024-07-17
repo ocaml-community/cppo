@@ -205,6 +205,15 @@
       (action (diff expect_ident.ref expect_ident.err)))
 
 (rule
+ (targets expect_ident_empty.err)
+ (deps (:< expect_ident_empty.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff expect_ident_empty.ref expect_ident_empty.err)))
+
+(rule
  (targets undefined.err)
  (deps (:< undefined.cppo))
  (action (with-stderr-to %{targets}
