@@ -190,7 +190,6 @@ and line e = parse
                   directive e lexbuf
                 )
                 else (
-                  e.line_start <- false;
                   clear e;
                   TEXT (loc lexbuf, false, s)
                 )
