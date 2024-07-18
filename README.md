@@ -65,7 +65,7 @@ BLANK* "#" BLANK* ("define"|"undef"
 
 Directives can be split into multiple lines by placing a backslash `\` at
 the end of the line to be continued. In general, any special character
-can used as a normal character by preceding it with backslash.
+can be used as a normal character by preceding it with backslash.
 
 
 File inclusion
