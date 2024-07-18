@@ -163,31 +163,38 @@ let line = ( [^'\n'] | '\\' ('\r'? '\n') )* ('\n' | eof)
 let dblank0 = (blank | '\\' '\r'? '\n')*
 let dblank1 = blank (blank | '\\' '\r'? '\n')*
 
-rule line e = parse
-    blank* "#" as s
-        {
-          match e.lexer with
-              `Test -> lexer_error lexbuf "Syntax error in boolean expression"
-            | `Ocaml ->
-                clear e;
-                if e.line_start then (
-                  e.in_directive <- true;
-                  add e s;
-                  e.token_start <- pos1 lexbuf;
-                  e.line_start <- false;
-                  directive e lexbuf
-                )
-                else
-                  TEXT (loc lexbuf, false, s)
-        }
+(* We use two different lexers: [ocaml_token] is used for ordinary
+   OCaml tokens; [test_token] is used inside the Boolean expression
+   that follows an #if directive. The field [e.lexer] indicates which
+   lexer is currently active. *)
 
-  | ""  { clear e;
-          (* We use two different lexers: [ocaml_token] is used for ordinary
-             OCaml tokens; [test_token] is used inside the Boolean expression
-             that follows an #if directive. *)
-          match e.lexer with
-          | `Ocaml -> ocaml_token e lexbuf
-          | `Test -> test_token e lexbuf }
+rule line e = parse
+
+  (* A directive begins with a # symbol, which must appear at the beginning
+     of a line. *)
+  | blank* "#" as s
+    {
+      match e.lexer with
+      | `Test ->
+          lexer_error lexbuf "Syntax error in boolean expression"
+      | `Ocaml ->
+          clear e;
+          if e.line_start then (
+            e.in_directive <- true;
+            add e s;
+            e.token_start <- pos1 lexbuf;
+            e.line_start <- false;
+            directive e lexbuf
+          )
+          else
+            TEXT (loc lexbuf, false, s)
+    }
+
+  | ""
+      { clear e;
+        match e.lexer with
+        | `Ocaml -> ocaml_token e lexbuf
+        | `Test -> test_token e lexbuf }
 
 and directive e = parse
 
