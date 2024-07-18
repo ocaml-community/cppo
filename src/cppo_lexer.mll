@@ -163,19 +163,7 @@ let line = ( [^'\n'] | '\\' ('\r'? '\n') )* ('\n' | eof)
 let dblank0 = (blank | '\\' '\r'? '\n')*
 let dblank1 = blank (blank | '\\' '\r'? '\n')*
 
-rule token e = parse
-    ""
-      {
-        (*
-          We use two different lexers for boolean expressions in #if directives
-          and for regular OCaml tokens.
-        *)
-        match e.lexer with
-            `Ocaml -> ocaml_token e lexbuf
-          | `Test -> test_token e lexbuf
-      }
-
-and line e = parse
+rule line e = parse
     blank* "#" as s
         {
           match e.lexer with
@@ -194,7 +182,12 @@ and line e = parse
         }
 
   | ""  { clear e;
-          token e lexbuf }
+          (* We use two different lexers: [ocaml_token] is used for ordinary
+             OCaml tokens; [test_token] is used inside the Boolean expression
+             that follows an #if directive. *)
+          match e.lexer with
+          | `Ocaml -> ocaml_token e lexbuf
+          | `Test -> test_token e lexbuf }
 
 and directive e = parse
 
