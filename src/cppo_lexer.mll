@@ -181,18 +181,16 @@ and line e = parse
           match e.lexer with
               `Test -> lexer_error lexbuf "Syntax error in boolean expression"
             | `Ocaml ->
+                clear e;
                 if e.line_start then (
                   e.in_directive <- true;
-                  clear e;
                   add e s;
                   e.token_start <- pos1 lexbuf;
                   e.line_start <- false;
                   directive e lexbuf
                 )
-                else (
-                  clear e;
+                else
                   TEXT (loc lexbuf, false, s)
-                )
         }
 
   | ""  { clear e;
