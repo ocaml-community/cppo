@@ -453,8 +453,12 @@ and ocaml_token e = parse
       { e.line_start <- false;
         TEXT (loc lexbuf, false, lexeme lexbuf) }
 
+  (* At the end of the file, the lexer normally produces EOF. However,
+     if we are currently inside a definition (opened by #define) then
+     the lexer produces ENDEF followed by EOF. *)
   | eof
-      { EOF }
+      { if e.in_directive then (e.in_directive <- false; ENDEF (loc lexbuf))
+        else EOF }
 
 
 and comment startloc e depth = parse

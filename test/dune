@@ -96,6 +96,11 @@
  (deps (:< higher_order_macros.cppo))
  (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
 
+(rule
+ (targets include_define_on_last_line.out)
+ (deps (:< include_define_on_last_line.cppo) define_on_last_line.cppo)
+ (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
+
 (rule (alias runtest) (package cppo)
       (action (diff ext.ref ext.out)))
 
@@ -128,6 +133,9 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff higher_order_macros.ref higher_order_macros.out)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff include_define_on_last_line.ref include_define_on_last_line.out)))
 
 ;; ---------------------------------------------------------------------------
 ;; Negative tests.
