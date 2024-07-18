@@ -185,10 +185,12 @@ rule line e = parse
     {
       assert_ocaml_lexer e lexbuf;
       clear e;
+      (* We systematically set [e.token_start], so that [long_loc e] will
+         correctly produce the location of the last token. *)
+      e.token_start <- pos1 lexbuf;
       if e.line_start then (
         e.in_directive <- true;
         add e s;
-        e.token_start <- pos1 lexbuf;
         e.line_start <- false;
         directive e lexbuf
       )
@@ -198,6 +200,9 @@ rule line e = parse
 
   | ""
       { clear e;
+        (* We systematically set [e.token_start], so that [long_loc e] will
+           correctly produce the location of the last token. *)
+        e.token_start <- pos1 lexbuf;
         match e.lexer with
         | `Ocaml -> ocaml_token e lexbuf
         | `Test -> test_token e lexbuf }
