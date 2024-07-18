@@ -56,14 +56,19 @@ at the beginning of a line, possibly preceded by some whitespace, and followed
 by a valid directive name or by a number:
 
 ```ocaml
-BLANK* "#" BLANK* ("define"|"undef"
+BLANK* "#" BLANK* ("def"|"endef"|"define"|"undef"
                   |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
                   |"include"
                   |"warning"|"error"
                   |"ext"|"endext") ...
 ```
 
-Directives can be split into multiple lines by placing a backslash `\` at
+A macro definition that is delimited by `#def` and `#enddef` can span
+several lines. There is no need for protecting line endings with
+backslash characters `\`.
+
+A directive (other than `#def ... #enddef`)
+can be split into multiple lines by placing a backslash character `\` at
 the end of the line to be continued. In general, any special character
 can be used as a normal character by preceding it with backslash.
 
@@ -151,17 +156,6 @@ BAR(0)              (* A use of this parameterized macro *)
 BAR()               (* Another valid use -- the argument is empty *)
 ```
 
-Here is a multi-line macro definition. Newlines occurring between
-tokens must be protected by a backslash:
-
-```ocaml
-#define repeat_until(action,condition) \
-  action; \
-  while not (condition) do \
-    action \
-  done
-```
-
 All user-definable macros are constant. There are however two
 predefined variable macros: `__FILE__` and `__LINE__` which take the value
 of the position in the source file where the macro is being expanded.
@@ -180,8 +174,55 @@ cppo -D 'VERSION 1.0' example.ml
 ocamlopt -c -pp "cppo -D 'VERSION 1.0'" example.ml
 ```
 
-Higher-Order Macros
+Multi-line macros and nested macros
+-----------------------------------
+
+A macro definition that begins with `#define` can span several lines.
+In that case, the end of each line must be protected with a backslash
+character, as in this example:
+
+```ocaml
+#define repeat_until(action,condition) \
+  action; \
+  while not (condition) do \
+    action \
+  done
+```
+
+In other words, at the first line ending that is *not* preceded by a `\`
+character, an `#enddefine` token is implicitly generated,
+and the definition ends.
+
+This convention, which is inherited from C, causes two problems. First,
+protecting every line ending with a `\` character is painful. Second, more
+seriously, this convention does not allow macro definitions to be nested.
+Indeed, if one attempts to nest two definitions that begin with `#define`,
+then only one `#enddefine` token is generated; it is generated at the first
+unprotected line ending. So, the beginnings and ends of definitions cannot
+be correctly balanced.
+
+These problems are avoided by using an alternative syntax where the beginning
+and end of a macro definition are explicitly marked by `#def` and `#enddef`.
+Here is an example:
+
+```ocaml
+#def repeat_until(action,condition)
+  action;
+  while not (condition) do
+    action
+  done
+#enddef
+```
+
+With this syntax, a macro can span several lines:
+there is no need to protect line endings with `\` characters.
+Furthermore, this syntax allows macro definitions to be nested:
+inside a macro definition that is delimited by `#def` and `#enddef`,
+both `#def` and `#define` can be used.
+
+Higher-order macros
 -------------------
+
 A parameterized macro can take a parameterized macro as a parameter:
 this is known as a higher-order macro.
 
