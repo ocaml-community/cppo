@@ -122,6 +122,13 @@ let is_reserved_directive =
   List.iter (fun s -> Hashtbl.add tbl s ()) cppo_directives;
   fun s -> Hashtbl.mem tbl s
 
+let assert_ocaml_lexer e lexbuf =
+  match e.lexer with
+  | `Test ->
+      lexer_error lexbuf "Syntax error in boolean expression"
+  | `Ocaml ->
+      ()
+
 }
 
 (* standard character classes used for macro identifiers *)
@@ -174,20 +181,17 @@ rule line e = parse
      of a line. *)
   | blank* "#" as s
     {
-      match e.lexer with
-      | `Test ->
-          lexer_error lexbuf "Syntax error in boolean expression"
-      | `Ocaml ->
-          clear e;
-          if e.line_start then (
-            e.in_directive <- true;
-            add e s;
-            e.token_start <- pos1 lexbuf;
-            e.line_start <- false;
-            directive e lexbuf
-          )
-          else
-            TEXT (loc lexbuf, false, s)
+      assert_ocaml_lexer e lexbuf;
+      clear e;
+      if e.line_start then (
+        e.in_directive <- true;
+        add e s;
+        e.token_start <- pos1 lexbuf;
+        e.line_start <- false;
+        directive e lexbuf
+      )
+      else
+        TEXT (loc lexbuf, false, s)
     }
 
   | ""
