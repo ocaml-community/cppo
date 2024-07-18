@@ -104,9 +104,11 @@ let get env = Buffer.contents env.buf
 let long_loc e = (e.token_start, pos2 e.lexbuf)
 
 let cppo_directives = [
+  "def";
   "define";
   "elif";
   "else";
+  "enddef";
   "endif";
   "error";
   "if";
@@ -215,6 +217,28 @@ and directive e = parse
   | blank* "define" dblank1 (ident as id)
       { let xs = [] in
         DEF (long_loc e, id, xs) }
+
+  (* #def is identical to #define, except it does not set [e.directive],
+     so backslashes and newlines do not receive special treatment. The
+     end of the macro definition must be explicitly signaled by #enddef. *)
+  | blank* "def" dblank1 (ident as id) "("
+      { e.in_directive <- false;
+        let xs = formals1 lexbuf in
+        assert (xs <> []);
+        DEF (long_loc e, id, xs) }
+  | blank* "def" dblank1 (ident as id)
+      { e.in_directive <- false;
+        let xs = [] in
+        DEF (long_loc e, id, xs) }
+
+  (* #enddef ends a definition, which (we expect) has been opened by #def.
+     Because we use the same pair of tokens, namely [DEF] and [ENDEF], for
+     both kinds of definitions (#define and #def), it is in fact possible to
+     begin a definition with #define and end it with #endef. We do not
+     document this fact, and users should not rely on it. *)
+  | blank* "enddef"
+      { blank_until_eol e lexbuf;
+        ENDEF (long_loc e) }
 
   | blank* "undef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
