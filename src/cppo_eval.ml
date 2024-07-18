@@ -389,11 +389,11 @@ let parse ~preserve_quotations file lexbuf =
     Cppo_parser.main (Cppo_lexer.line lexer_env) lexbuf
   with
       Parsing.Parse_error ->
-        error (Cppo_lexer.loc lexbuf) "syntax error"
+        error (Cppo_lexer.long_loc lexer_env) "syntax error"
     | Cppo_types.Cppo_error _ as e ->
         raise e
     | e ->
-        error (Cppo_lexer.loc lexbuf) (Printexc.to_string e)
+        error (Cppo_lexer.long_loc lexer_env) (Printexc.to_string e)
 
 let plural n =
   if abs n <= 1 then ""
