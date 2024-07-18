@@ -101,6 +101,11 @@
  (deps (:< include_define_on_last_line.cppo) define_on_last_line.cppo)
  (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
 
+(rule
+ (targets def.out)
+ (deps (:< def.cppo))
+ (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
+
 (rule (alias runtest) (package cppo)
       (action (diff ext.ref ext.out)))
 
@@ -136,6 +141,9 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff include_define_on_last_line.ref include_define_on_last_line.out)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff def.ref def.out)))
 
 ;; ---------------------------------------------------------------------------
 ;; Negative tests.
@@ -247,3 +255,21 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff int_expansion_error.ref int_expansion_error.err)))
+
+(rule
+ (targets extraneous_enddef.err)
+ (deps (:< extraneous_enddef.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff extraneous_enddef.ref extraneous_enddef.err)))
+
+(rule
+ (targets missing_enddef.err)
+ (deps (:< missing_enddef.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff missing_enddef.ref missing_enddef.err)))
