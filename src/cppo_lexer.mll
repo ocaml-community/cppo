@@ -212,8 +212,7 @@ and directive e = parse
   (* If #define <name> is not followed with an opening parenthesis then this
      is interpreted as an ordinary (non-parameterized) macro definition. *)
   | blank* "define" dblank1 (ident as id)
-      { assert e.in_directive;
-        let xs = [] in
+      { let xs = [] in
         DEF (long_loc e, id, xs) }
 
   | blank* "undef" dblank1 (ident as id)
