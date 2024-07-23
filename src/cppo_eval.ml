@@ -25,27 +25,30 @@ type entry =
 and env =
   entry M.t
 
+let basic x : formal =
+  (x, base)
+
 let ident x =
   `Ident (dummy_loc, x, [])
 
 let dummy_defun formals body env =
-  EDef (dummy_loc, formals, body, env)
+  EDef (dummy_loc, List.map basic formals, body, env)
 
 let builtins : (string * (env -> entry)) list = [
   "STRINGIFY",
   dummy_defun
     ["x"]
-    [`Stringify (ident "x")]
+    (`Stringify (ident "x"))
   ;
   "CONCAT",
   dummy_defun
     ["x";"y"]
-    [`Concat (ident "x", ident "y")]
+    (`Concat (ident "x", ident "y"))
   ;
   "CAPITALIZE",
   dummy_defun
     ["x"]
-    [`Capitalize (ident "x")]
+    (`Capitalize (ident "x"))
   ;
 ]
 
@@ -73,22 +76,16 @@ let rec add_sep sep last = function
 
 (* Transform a list of actual macro arguments back into ordinary text,
    after discovering that they are not macro arguments after all. *)
-let text loc name actuals : node list =
+let text loc name (actuals : actuals) : node list =
   match actuals with
   | [] ->
       [`Text (loc, false, name)]
   | _ :: _ ->
-      let with_sep =
-        add_sep
-          [`Text (loc, false, ",")]
-          [`Text (loc, false, ")")]
-          actuals
-      in
       `Text (loc, false, name ^ "(") ::
-      List.flatten with_sep
-
-let remove_space l =
-  List.filter (function `Text (_, true, _) -> false | _ -> true) l
+      add_sep
+        (`Text (loc, false, ","))
+        (`Text (loc, false, ")"))
+        actuals
 
 let trim_and_compact buf s =
   let started = ref false in
@@ -153,6 +150,24 @@ let concat loc x y =
     if s = "" then " "
     else " " ^ s ^ " "
 
+let int_expansion_error loc name =
+    error loc
+      (sprintf "\
+Variable %s found in cppo boolean expression must expand
+into an int literal, into a tuple of int literals,
+or into a variable with the same properties."
+         name)
+
+let rec int_expansion loc name (node : node) : string =
+  match node with
+  | `Text (_loc, _is_space, s) ->
+      s
+  | `Seq (_loc, nodes) ->
+      List.map (int_expansion loc name) nodes
+      |> String.concat ""
+  | _ ->
+      int_expansion_error loc name
+
 (*
    Expand the contents of a variable used in a boolean expression.
 
@@ -174,7 +189,7 @@ let concat loc x y =
    - x, where x expands into 123.
 *)
 let rec eval_ident env loc name =
-  let l =
+  let body =
     match find_opt name env with
     | Some (EDef (_loc, [], body, _env)) ->
         body
@@ -183,38 +198,22 @@ let rec eval_ident env loc name =
     | None ->
         error loc (sprintf "Undefined identifier %S" name)
   in
-  let expansion_error () =
-    error loc
-      (sprintf "\
-Variable %s found in cppo boolean expression must expand
-into an int literal, into a tuple of int literals,
-or into a variable with the same properties."
-         name)
-  in
   (try
-     match remove_space l with
-       [ `Ident (loc, name, []) ] ->
+     match node_is_ident body with
+     | Some (loc, name) ->
          (* single identifier that we expand recursively *)
          eval_ident env loc name
-     | _ ->
+     | None ->
          (* int literal or int tuple literal; variables not allowed *)
-         let text =
-           List.map (
-             function
-               `Text (_, _is_space, s) -> s
-             | _ ->
-                 expansion_error ()
-           ) (Cppo_types.flatten_nodes l)
-         in
-         let s = String.concat "" text in
+         let s = int_expansion loc name body in
          (match Cppo_lexer.int_tuple_of_string s with
             Some [i] -> `Int i
           | Some l -> `Tuple (loc, List.map (fun i -> `Int i) l)
           | None ->
-              expansion_error ()
+              int_expansion_error loc name
          )
    with Cppo_error _ ->
-     expansion_error ()
+     int_expansion_error loc name
   )
 
 let rec replace_idents env (x : arith_expr) : arith_expr =
@@ -390,11 +389,11 @@ let parse ~preserve_quotations file lexbuf =
     Cppo_parser.main (Cppo_lexer.line lexer_env) lexbuf
   with
       Parsing.Parse_error ->
-        error (Cppo_lexer.loc lexbuf) "syntax error"
+        error (Cppo_lexer.long_loc lexer_env) "syntax error"
     | Cppo_types.Cppo_error _ as e ->
         raise e
     | e ->
-        error (Cppo_lexer.loc lexbuf) (Printexc.to_string e)
+        error (Cppo_lexer.long_loc lexer_env) (Printexc.to_string e)
 
 let plural n =
   if abs n <= 1 then ""
@@ -445,11 +444,67 @@ let check_arity loc name (formals : _ list) (actuals : _ list) =
       name formals (plural formals) actuals (plural actuals)
     |> error loc
 
+(* [macro_of_node node] checks that [node] is a single identifier,
+   possibly surrounded with whitespace, and returns this identifier
+   as well as its location. *)
+let macro_of_node (node : node) : loc * macro =
+  match node_is_ident node with
+  | Some (loc, x) ->
+      loc, x
+  | None ->
+      sprintf "The name of a macro is expected in this position"
+      |> error (node_loc node)
+
+(* [fetch loc x env] checks that the macro [x] exists in [env]
+   and fetches its definition.  *)
+let fetch loc (x : macro) env : entry =
+  match find_opt x env with
+  | None ->
+      sprintf "The macro '%s' is not defined" x
+      |> error loc
+  | Some def ->
+      def
+
+(* [entry_shape def] returns the shape of the macro that is defined
+   by the environment entry [def]. *)
+let entry_shape (entry : entry) : shape =
+  let EDef (_loc, formals, _body, _env) = entry in
+  Shape (List.map snd formals)
+
+(* [check_shape loc expected provided] checks that the shapes
+   [expected] and [provided] are equal. *)
+let check_shape loc expected provided =
+  if not (same_shape expected provided) then
+    sprintf "A macro of type %s was expected, but\n       \
+             a macro of type %s was provided"
+      (print_shape expected) (print_shape provided)
+    |> error loc
+
 (* [bind_one formal (loc, actual, env) accu] binds one formal parameter
-   to one actual argument, extending the environment [accu]. This formal
-   parameter becomes an ordinary (unparameterized) macro. *)
-let bind_one formal (loc, actual, env) accu =
-  M.add formal (EDef (loc, [], actual, env)) accu
+   to one actual argument, extending the environment [accu]. *)
+let bind_one (formal : formal) (loc, actual, env) accu =
+  let (x : macro), (expected : shape) = formal in
+  (* Analyze the shape of this formal parameter. *)
+  match expected with
+  | Shape [] ->
+      (* This formal parameter has the base shape: it is an ordinary
+         parameter. It becomes an ordinary (unparameterized) macro:
+         the name [x] becomes bound to the closure [actual, env]. *)
+      M.add x (EDef (loc, [], actual, env)) accu
+  | _ ->
+      (* This formal parameter has a shape other than the base shape:
+         it is itself a parameterized macro. In that case, we expect
+         the actual parameter to be just a name [y]. *)
+      let loc, y = macro_of_node actual in
+      (* Check that the macro [y] exists, and fetch its definition. *)
+      let def = fetch loc y env in
+      (* Compute its shape. *)
+      let provided = entry_shape def in
+      (* Check that the shapes match. *)
+      check_shape loc expected provided;
+      (* Now bind [x] to the definition of [y]. *)
+      (* This is analogous to [let x = y] in OCaml. *)
+      M.add x def accu
 
 (* [bind_many formals (loc, actuals, env) accu] binds a tuple of formal
    parameters to a tuple of actual arguments, extending the environment
@@ -540,7 +595,7 @@ and expand_node ?(top = false) g env0 (x : node) =
                  that exists here, at the macro application site. *)
               let env = bind_many formals (loc, actuals, env0) env in
               (* Process the macro's body in this extended environment. *)
-              let (_ : env) = expand_list g env body in
+              let (_ : env) = expand_node g env body in
               (* Continue with our original environment. *)
               env0
 
@@ -609,7 +664,7 @@ and expand_node ?(top = false) g env0 (x : node) =
         Buffer.add_string g.buf s;
         env0
 
-    | `Seq l ->
+    | `Seq (_loc, l) ->
         expand_list g env0 l
 
     | `Stringify x ->
