@@ -144,7 +144,7 @@ jobs:
 
       - name: Setup OCaml ${{ matrix.ocaml-version }} with v2
         if: matrix.setup-version == 'v2'
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
