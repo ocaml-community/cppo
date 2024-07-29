@@ -2,11 +2,7 @@
 name: Build
 on:
   push:
-    branches:
-      - master  # forall push/merge in master
   pull_request:
-    branches:
-      - "**"  # forall submitted Pull Requests
 
 jobs:
   build:
@@ -39,6 +35,8 @@ jobs:
           - 5.1.x
           - 5.2.x
         exclude:
+          - os: ubuntu-latest
+            setup-version: v2 # duplicated
           - os: macos-13
             setup-version: v3 # opam uninstall fails
           - os: macos-latest
@@ -96,6 +94,12 @@ jobs:
             ocaml-version: 4.12.x
           - os: windows-latest
             setup-version: v2
+            ocaml-version: 4.13.x
+          - os: windows-latest
+            setup-version: v2 # duplicated
+            ocaml-version: 4.14.x
+          - os: windows-latest
+            setup-version: v2 # duplicated
             ocaml-version: 5.0.x
           - os: windows-latest
             setup-version: v2
