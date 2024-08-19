@@ -132,8 +132,8 @@ node:
 | DEF body EOF
                 { let loc, _name, _formals = $1 in
                   error loc "This #def is never closed: perhaps #enddef is missing" }
-                (* We include this rule in order to produce a good error message
-                   when a #def has no matching #enddef. *)
+                /* We include this rule in order to produce a good error message
+                   when a #def has no matching #enddef. */
 
 | UNDEF
                 { `Undef $1 }
