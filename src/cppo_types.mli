@@ -6,6 +6,25 @@ exception Cppo_error of string
 type macro =
   string
 
+(* The shape of a macro.
+
+   The abstract syntax of shapes is τ ::= [τ, ..., τ].
+   That is, a macro takes a tuple of parameters, each
+   of which has a shape. The length of of this tuple
+   can be zero: this is the base case. *)
+type shape =
+  | Shape of shape list
+
+(* The base shape. This is the shape of a basic macro,
+   which takes no parameters, and produces text. *)
+val base : shape
+
+(* Printing a shape. *)
+val print_shape : shape -> string
+
+(* Testing two shapes for equality. *)
+val same_shape : shape -> shape -> bool
+
 type bool_expr =
     [ `True
     | `False
@@ -59,7 +78,7 @@ type node =
     | `Error of (loc * string)
     | `Warning of (loc * string)
     | `Text of (loc * bool * string) (* bool is true for space tokens *)
-    | `Seq of node list
+    | `Seq of (loc * node list)
     | `Stringify of node
     | `Capitalize of node
     | `Concat of (node * node)
@@ -67,9 +86,11 @@ type node =
     | `Current_line of loc
     | `Current_file of loc ]
 
-(* One formal macro parameter. *)
+(* A formal macro parameter consists of an identifier (the name of this
+   parameter) and a shape (the shape of this parameter). In the concrete
+   syntax, if the shape is omitted, then the base shape is assumed. *)
 and formal =
-  string
+  string * shape
 
 (* A tuple of formal macro parameters. *)
 and formals =
@@ -77,7 +98,7 @@ and formals =
 
 (* One actual macro argument. *)
 and actual =
-  node list
+  node
 
 (* A tuple of actual macro arguments. *)
 and actuals =
@@ -85,7 +106,7 @@ and actuals =
 
 (* The body of a macro definition. *)
 and body =
-  node list
+  node
 
 val dummy_loc : loc
 
@@ -93,4 +114,14 @@ val error : loc -> string -> _
 
 val warning : loc -> string -> unit
 
-val flatten_nodes : node list -> node list
+(* [node_loc] extracts the location of a node. *)
+val node_loc : node -> loc
+
+(* [is_whitespace_node] determines whether a node is just whitespace. *)
+val is_whitespace_node : node -> bool
+val is_whitespace_nodes : node list -> bool
+
+(* [node_is_ident node] tests whether [node] is a single identifier,
+   possibly surrounded with whitespace, and (if successful) returns
+   this identifier as well as its location. *)
+val node_is_ident : node -> (loc * string) option

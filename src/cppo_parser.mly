@@ -3,7 +3,8 @@
 %}
 
 /* Directives */
-%token < Cppo_types.loc * string > DEF DEFUN UNDEF INCLUDE WARNING ERROR
+%token < Cppo_types.loc * string > UNDEF INCLUDE WARNING ERROR
+%token < Cppo_types.loc * string * (string * Cppo_types.shape) list > DEF
 %token < Cppo_types.loc * string option * int > LINE
 %token < Cppo_types.loc * Cppo_types.bool_expr > IFDEF
 %token < Cppo_types.loc * string * string > EXT
@@ -48,9 +49,23 @@ unode_list0:
 |                    { [] }
 ;
 
+body:
+| unode_list0
+    { let pos1 = Parsing.symbol_start_pos()
+      and pos2 = Parsing.symbol_end_pos() in
+      let loc = (pos1, pos2) in
+      (loc, $1) }
+
 pnode_list0:
 | pnode pnode_list0  { $1 :: $2 }
 |                    { [] }
+;
+
+actual:
+| pnode_list0        { let pos1 = Parsing.symbol_start_pos()
+                       and pos2 = Parsing.symbol_end_pos() in
+                       let loc = (pos1, pos2) in
+                       `Seq (loc, $1) }
 ;
 
 /* node in which opening and closing parentheses don't need to match */
@@ -65,9 +80,16 @@ unode:
 pnode:
 | node          { $1 }
 | OP_PAREN pnode_or_comma_list0 CL_PAREN
-                { `Seq [`Text ($1, false, "(");
-                        `Seq $2;
-                        `Text ($3, false, ")")] }
+                { let nodes =
+                    `Text ($1, false, "(") ::
+                    $2 @
+                    `Text ($3, false, ")") ::
+                    []
+                  in
+                  let pos1, _ = $1
+                  and _, pos2 = $3 in
+                  let loc = (pos1, pos2) in
+                  `Seq (loc, nodes) }
 ;
 
 /* node without parentheses handling (need to use unode or pnode) */
@@ -77,7 +99,7 @@ node:
 | IDENT         { let loc, name = $1 in
                   `Ident (loc, name, []) }
 
-| FUNIDENT args1 CL_PAREN
+| FUNIDENT actuals1 CL_PAREN
                 {
                 (* macro application that receives at least one argument,
                    possibly empty.  We cannot distinguish syntactically between
@@ -93,36 +115,25 @@ node:
 | CURRENT_LINE  { `Current_line $1 }
 | CURRENT_FILE  { `Current_file $1 }
 
-| DEF unode_list0 ENDEF
-                { let (pos1, _), name = $1 in
-
-                  (* Additional spacing is needed for cases like '+foo+'
-                     expanding into '++' instead of '+ +'. *)
-                  let safe_space = `Text ($3, true, " ") in
-
-                  let body = $2 @ [safe_space] in
-                  let _, pos2 = $3 in
-                  let formals = [] in
-                  `Def ((pos1, pos2), name, formals, body) }
-
-| DEFUN def_args1 CL_PAREN unode_list0 ENDEF
-                { let (pos1, _), name = $1 in
-                  let formals = $2 in
-
+| DEF body ENDEF
+                { let (pos1, _), name, formals = $1 in
+                  let loc, body = $2 in
                   (* Additional spacing is needed for cases like 'foo()bar'
                      where 'foo()' expands into 'abc', giving 'abcbar'
                      instead of 'abc bar';
                      Also needed for '+foo()+' expanding into '++' instead
                      of '+ +'. *)
-                  let safe_space = `Text ($5, true, " ") in
-
-                  let body = $4 @ [safe_space] in
-                  let _, pos2 = $5 in
+                  let safe_space = `Text ($3, true, " ") in
+                  let body = body @ [safe_space] in
+                  let body = `Seq (loc, body) in
+                  let _, pos2 = $3 in
                   `Def ((pos1, pos2), name, formals, body) }
 
-| DEFUN CL_PAREN
-                { error (fst (fst $1), snd $2)
-                    "At least one argument is required" }
+| DEF body EOF
+                { let loc, _name, _formals = $1 in
+                  error loc "This #def is never closed: perhaps #enddef is missing" }
+                /* We include this rule in order to produce a good error message
+                   when a #def has no matching #enddef. */
 
 | UNDEF
                 { `Undef $1 }
@@ -189,29 +200,15 @@ elif_list:
 |                  { [] }
 ;
 
-args1:
-  pnode_list0 COMMA args1   { $1 :: $3  }
-| pnode_list0               { [ $1 ] }
+actuals1:
+  actual COMMA actuals1 { $1 :: $3  }
+| actual                { [ $1 ] }
 ;
 
 pnode_or_comma_list0:
 | pnode pnode_or_comma_list0   { $1 :: $2 }
 | COMMA pnode_or_comma_list0   { `Text ($1, false, ",") :: $2 }
 |                              { [] }
-;
-
-def_args1:
-| arg_blank IDENT COMMA def_args1
-                               { (snd $2) :: $4 }
-| arg_blank IDENT              { [ snd $2 ] }
-;
-
-arg_blank:
-| TEXT arg_blank         { let loc, is_space, _s = $1 in
-                           if not is_space then
-                             error loc "Invalid argument list"
-                         }
-|                        { () }
 ;
 
 test:

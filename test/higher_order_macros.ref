@@ -1,0 +1,95 @@
+# 1 "higher_order_macros.cppo"
+(* This macro application combinator provides call-by-value
+   semantics: the actual argument is evaluated up front and
+   its value is bound to a variable, which is passed as an
+   argument to the macro [F]. *)
+
+# 7 "higher_order_macros.cppo"
+(* Some trivial tests. *)
+# 10 "higher_order_macros.cppo"
+let forty_one = 
+# 10 "higher_order_macros.cppo"
+                (let __x = ( 41) in  __x ) 
+# 11 "higher_order_macros.cppo"
+let forty_two = 
+# 11 "higher_order_macros.cppo"
+                (let __x = (      42  ) in  __x ) 
+
+# 13 "higher_order_macros.cppo"
+(* A [for]-loop macro. *)
+
+# 20 "higher_order_macros.cppo"
+(* A [for]-loop macro that performs unrolling. *)
+
+# 35 "higher_order_macros.cppo"
+(* Iteration over an array, with a normal loop. *)
+let iter f a =
+  
+# 38 "higher_order_macros.cppo"
+   (
+  for __index = 0 to  Array.length a-1 do
+     (f a.(__index)) 
+  done
+) 
+
+# 41 "higher_order_macros.cppo"
+(* Iteration over an array, with an unrolled loop. *)
+let unrolled_iter f a =
+  
+# 44 "higher_order_macros.cppo"
+   (
+  let __finish = ( Array.length a) in
+  let __index = ref (0) in
+  while !__index + 2 <= __finish do
+    (let __x = ( !__index) in  (f a.(__x)) ) ;
+    (let __x = ( !__index + 1) in  (f a.(__x)) ) ;
+    __index := !__index + 2
+  done;
+  while !__index < __finish do
+    (let __x = ( !__index) in  (f a.(__x)) ) ;
+    __index := !__index + 1
+  done
+) 
+
+# 47 "higher_order_macros.cppo"
+(* Printing an array, with a normal loop. *)
+let print_int_array a =
+  
+# 50 "higher_order_macros.cppo"
+   (
+  for __index = 0 to  Array.length a-1 do
+     Printf.printf "%d" a.(__index) 
+  done
+) 
+
+# 52 "higher_order_macros.cppo"
+(* A higher-order macro that produces a definition of [iter],
+   and accepts an arbitrary definition of the macro [LOOP]. *)
+
+# 60 "higher_order_macros.cppo"
+(* Some noise, which does not affect the above definitions. *)
+
+# 63 "higher_order_macros.cppo"
+ 
+  let iter f a = 
+   (
+  for __index = 0 to  Array.length a-1 do
+     (f a.(__index)) 
+  done
+)  
+# 64 "higher_order_macros.cppo"
+ 
+  let unrolled_iter f a = 
+   (
+  let __finish = ( Array.length a) in
+  let __index = ref (0) in
+  while !__index + 2 <= __finish do
+    (let __x = ( !__index) in  (f a.(__x)) ) ;
+    (let __x = ( !__index + 1) in  (f a.(__x)) ) ;
+    __index := !__index + 2
+  done;
+  while !__index < __finish do
+    (let __x = ( !__index) in  (f a.(__x)) ) ;
+    __index := !__index + 1
+  done
+)  

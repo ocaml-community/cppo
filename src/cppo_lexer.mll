@@ -104,9 +104,11 @@ let get env = Buffer.contents env.buf
 let long_loc e = (e.token_start, pos2 e.lexbuf)
 
 let cppo_directives = [
+  "def";
   "define";
   "elif";
   "else";
+  "enddef";
   "endif";
   "error";
   "if";
@@ -121,6 +123,13 @@ let is_reserved_directive =
   let tbl = Hashtbl.create 20 in
   List.iter (fun s -> Hashtbl.add tbl s ()) cppo_directives;
   fun s -> Hashtbl.mem tbl s
+
+let assert_ocaml_lexer e lexbuf =
+  match e.lexer with
+  | `Test ->
+      lexer_error lexbuf "Syntax error in boolean expression"
+  | `Ocaml ->
+      ()
 
 }
 
@@ -163,49 +172,78 @@ let line = ( [^'\n'] | '\\' ('\r'? '\n') )* ('\n' | eof)
 let dblank0 = (blank | '\\' '\r'? '\n')*
 let dblank1 = blank (blank | '\\' '\r'? '\n')*
 
-rule token e = parse
-    ""
-      {
-        (*
-          We use two different lexers for boolean expressions in #if directives
-          and for regular OCaml tokens.
-        *)
+(* We use two different lexers: [ocaml_token] is used for ordinary
+   OCaml tokens; [test_token] is used inside the Boolean expression
+   that follows an #if directive. The field [e.lexer] indicates which
+   lexer is currently active. *)
+
+rule line e = parse
+
+  (* A directive begins with a # symbol, which must appear at the beginning
+     of a line. *)
+  | blank* "#" as s
+    {
+      assert_ocaml_lexer e lexbuf;
+      clear e;
+      (* We systematically set [e.token_start], so that [long_loc e] will
+         correctly produce the location of the last token. *)
+      e.token_start <- pos1 lexbuf;
+      if e.line_start then (
+        e.in_directive <- true;
+        add e s;
+        e.line_start <- false;
+        directive e lexbuf
+      )
+      else
+        TEXT (loc lexbuf, false, s)
+    }
+
+  | ""
+      { clear e;
+        (* We systematically set [e.token_start], so that [long_loc e] will
+           correctly produce the location of the last token. *)
+        e.token_start <- pos1 lexbuf;
         match e.lexer with
-            `Ocaml -> ocaml_token e lexbuf
-          | `Test -> test_token e lexbuf
-      }
-
-and line e = parse
-    blank* "#" as s
-        {
-          match e.lexer with
-              `Test -> lexer_error lexbuf "Syntax error in boolean expression"
-            | `Ocaml ->
-                if e.line_start then (
-                  e.in_directive <- true;
-                  clear e;
-                  add e s;
-                  e.token_start <- pos1 lexbuf;
-                  e.line_start <- false;
-                  directive e lexbuf
-                )
-                else (
-                  e.line_start <- false;
-                  clear e;
-                  TEXT (loc lexbuf, false, s)
-                )
-        }
-
-  | ""  { clear e;
-          token e lexbuf }
+        | `Ocaml -> ocaml_token e lexbuf
+        | `Test -> test_token e lexbuf }
 
 and directive e = parse
-    blank* "define" dblank1 (ident as id) "("
-      { DEFUN (long_loc e, id) }
 
+  (* If #define <name> is immediately followed with an opening parenthesis
+     (without any blank space) then this is interpreted as a parameterized
+     macro definition. The formal parameters are parsed by the lexer. *)
+  | blank* "define" dblank1 (ident as id) "("
+      { let xs = formals1 lexbuf in
+        assert (xs <> []);
+        DEF (long_loc e, id, xs) }
+
+  (* If #define <name> is not followed with an opening parenthesis then this
+     is interpreted as an ordinary (non-parameterized) macro definition. *)
   | blank* "define" dblank1 (ident as id)
-      { assert e.in_directive;
-        DEF (long_loc e, id) }
+      { let xs = [] in
+        DEF (long_loc e, id, xs) }
+
+  (* #def is identical to #define, except it does not set [e.directive],
+     so backslashes and newlines do not receive special treatment. The
+     end of the macro definition must be explicitly signaled by #enddef. *)
+  | blank* "def" dblank1 (ident as id) "("
+      { e.in_directive <- false;
+        let xs = formals1 lexbuf in
+        assert (xs <> []);
+        DEF (long_loc e, id, xs) }
+  | blank* "def" dblank1 (ident as id)
+      { e.in_directive <- false;
+        let xs = [] in
+        DEF (long_loc e, id, xs) }
+
+  (* #enddef ends a definition, which (we expect) has been opened by #def.
+     Because we use the same pair of tokens, namely [DEF] and [ENDEF], for
+     both kinds of definitions (#define and #def), it is in fact possible to
+     begin a definition with #define and end it with #endef. We do not
+     document this fact, and users should not rely on it. *)
+  | blank* "enddef"
+      { blank_until_eol e lexbuf;
+        ENDEF (long_loc e) }
 
   | blank* "undef" dblank1 (ident as id)
       { blank_until_eol e lexbuf;
@@ -448,8 +486,12 @@ and ocaml_token e = parse
       { e.line_start <- false;
         TEXT (loc lexbuf, false, lexeme lexbuf) }
 
+  (* At the end of the file, the lexer normally produces EOF. However,
+     if we are currently inside a definition (opened by #define) then
+     the lexer produces ENDEF followed by EOF. *)
   | eof
-      { EOF }
+      { if e.in_directive then (e.in_directive <- false; ENDEF (loc lexbuf))
+        else EOF }
 
 
 and comment startloc e depth = parse
@@ -697,6 +739,86 @@ and int_tuple_content = parse
   | space* (([^',' ')']#space)+ as s) space* ")" space* eof
                       { [Int64.of_string s] }
 
+(* -------------------------------------------------------------------------- *)
+
+(* Lists of formal macro parameters. *)
+
+(* [formals1] recognizes a nonempty comma-separated list of formal macro
+   parameters, ended with a closing parenthesis. *)
+
+and formals1 = parse
+  | blank+
+      { formals1 lexbuf }
+  | ")"
+      { lexer_error lexbuf "A macro must have at least one formal parameter" }
+  | ""
+      { let x = formal lexbuf in
+        formals0 [x] lexbuf }
+
+(* [formals0 xs] recognizes a possibly empty list of comma-preceded formal
+   macro parameters, ended with a closing parenthesis.
+   [xs] is the accumulator. *)
+
+and formals0 xs = parse
+  | blank+
+      { formals0 xs lexbuf }
+  | ")"
+      { List.rev xs }
+  | ","
+      { let x = formal lexbuf in
+        formals0 (x :: xs) lexbuf }
+  | _
+  | eof
+      { lexer_error lexbuf "Invalid formal parameter list: expected ',' or ')'" }
+
+(* [formal] recognizes one formal macro parameter. It is either an identifier
+   [x] or an identifier annotated with a shape [x : sh]. *)
+
+and formal = parse
+  | blank+
+      { formal lexbuf }
+  | (ident as x) blank* ":"
+      { (x, shape lexbuf) }
+  | ident as x
+      { (x, base) }
+  | _
+  | eof
+      { lexer_error lexbuf "Invalid formal parameter: expected an identifier" }
+
+(* [shape] recognizes a shape. *)
+
+and shape = parse
+  | blank+
+      { shape lexbuf }
+  | "."
+      (* The base shape can be written [] but we also allow .
+         as a more readable alternative. *)
+      { base }
+  | "["
+      { Shape (shapes [] lexbuf) }
+  | _
+  | eof
+      { lexer_error lexbuf "Invalid shape: expected '.' or '[' or ']'" }
+      (* A closing square bracket is valid if an opening square bracket
+         has been entered. We could keep track of this via an additional
+         parameter, but that seems overkill. *)
+
+(* [shapes shs] recognizes a possibly empty list of shapes, ended with
+   a closing square bracket. There is no separator between shapes.
+   [shs] is the accumulator. *)
+
+and shapes shs = parse
+  | blank+
+      { shapes shs lexbuf }
+  | "]"
+      { List.rev shs }
+  | ""
+      { let sh = shape lexbuf in
+        shapes (sh :: shs) lexbuf }
+
+(* -------------------------------------------------------------------------- *)
+
+(* Initialization. *)
 
 {
   let init ~preserve_quotations file lexbuf =
