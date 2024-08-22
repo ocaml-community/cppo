@@ -223,7 +223,7 @@ and directive e = parse
       { let xs = [] in
         DEF (long_loc e, id, xs) }
 
-  (* #def is identical to #define, except it does not set [e.directive],
+  (* #def is identical to #define, except it does not set [e.in_directive],
      so backslashes and newlines do not receive special treatment. The
      end of the macro definition must be explicitly signaled by #enddef. *)
   | blank* "def" dblank1 (ident as id) "("
