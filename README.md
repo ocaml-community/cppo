@@ -56,7 +56,7 @@ at the beginning of a line, possibly preceded by some whitespace, and followed
 by a valid directive name or by a number:
 
 ```ocaml
-BLANK* "#" BLANK* ("def"|"endef"|"define"|"undef"
+BLANK* "#" BLANK* ("def"|"enddef"|"define"|"undef"
                   |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
                   |"include"
                   |"warning"|"error"

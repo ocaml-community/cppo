@@ -239,7 +239,7 @@ and directive e = parse
   (* #enddef ends a definition, which (we expect) has been opened by #def.
      Because we use the same pair of tokens, namely [DEF] and [ENDEF], for
      both kinds of definitions (#define and #def), it is in fact possible to
-     begin a definition with #define and end it with #endef. We do not
+     begin a definition with #define and end it with #enddef. We do not
      document this fact, and users should not rely on it. *)
   | blank* "enddef"
       { blank_until_eol e lexbuf;
