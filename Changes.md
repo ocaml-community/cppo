@@ -1,3 +1,10 @@
+## v1.7.0 (2024-08-22)
+- [+ui] Multi-line macros, without line terminators `\`,
+        can now be defined using `#def` and `#enddef`.
+        These macro definitions can be nested.
+- [+ui] Higher-order macros:
+        a macro can now take a parameterized macro as a parameter.
+
 ## v1.6.9 (2022-05-19)
 - [bug] Fix multiline string support (#81)
 
