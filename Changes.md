@@ -4,6 +4,7 @@
         These macro definitions can be nested.
 - [+ui] Higher-order macros:
         a macro can now take a parameterized macro as a parameter.
+- [compat] Better locations for some syntax error messages.
 
 ## v1.6.9 (2022-05-19)
 - [bug] Fix multiline string support (#81)
