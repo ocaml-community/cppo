@@ -624,6 +624,14 @@ and expand_node ?(top = false) g env0 (x : node) =
         else
           M.add name (EDef (loc, formals, body, env0)) env0
 
+    | `Scope body ->
+        (* A [body] is just a [node]. We expand this node, and drop
+           the resulting environment; instead, we return the current
+           environment. *)
+        let env = expand_node ~top g env0 body in
+        ignore env;
+        env0
+
     | `Undef (loc, name) ->
         g.require_location := true;
         if is_reserved name then
