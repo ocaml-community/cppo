@@ -381,7 +381,13 @@ type globals = {
     (* mapping from extension ID to pipeline command *)
 }
 
-
+(* [preserving_enable_loc g action] saves [g.enable_loc], runs [action()],
+   then restores [g.enable_loc]. The result of [action()] is returned. *)
+let preserving_enable_loc g action =
+  let enable_loc0 = !(g.enable_loc) in
+  let result = action() in
+  g.enable_loc := enable_loc0;
+  result
 
 let parse ~preserve_quotations file lexbuf =
   let lexer_env = Cppo_lexer.init ~preserve_quotations file lexbuf in
@@ -574,7 +580,7 @@ and expand_ordinary_ident g env0 loc name actuals =
     else g
   in
 
-  let enable_loc0 = !(g.enable_loc) in
+  preserving_enable_loc g @@ fun () ->
 
   (* There is no definition for the macro [name], so this is not
      a macro application after all. Transform it back into text,
@@ -582,9 +588,6 @@ and expand_ordinary_ident g env0 loc name actuals =
   let env = expand_list g env0 (text loc name actuals) in
 
   g.require_location := false;
-
-  (* restore initial setting *)
-  g.enable_loc := enable_loc0;
 
   env
 
@@ -598,7 +601,7 @@ and expand_macro_application ~top g env0 loc name actuals def =
     else g
   in
 
-  let enable_loc0 = !(g.enable_loc) in
+  preserving_enable_loc g @@ fun () ->
 
   g.require_location := true;
 
@@ -621,9 +624,6 @@ and expand_macro_application ~top g env0 loc name actuals def =
   let (_ : env) = expand_node g env body in
 
   g.require_location := true;
-
-  (* restore initial setting *)
-  g.enable_loc := enable_loc0;
 
   (* Continue with our original environment. *)
   env0
@@ -690,7 +690,7 @@ and expand_node ?(top = false) g env0 (x : node) =
         expand_list g env0 l
 
     | `Stringify x ->
-        let enable_loc0 = !(g.enable_loc) in
+        preserving_enable_loc g @@ fun () ->
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
@@ -698,11 +698,10 @@ and expand_node ?(top = false) g env0 (x : node) =
         ignore (expand_node g env0 x);
         stringify buf0 (Buffer.contents local_buf);
         g.buf <- buf0;
-        g.enable_loc := enable_loc0;
         env0
 
     | `Capitalize (x : node) ->
-        let enable_loc0 = !(g.enable_loc) in
+        preserving_enable_loc g @@ fun () ->
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
@@ -713,10 +712,10 @@ and expand_node ?(top = false) g env0 (x : node) =
           (* stringify buf0 (Buffer.contents local_buf); *)
         Buffer.add_string buf0 s ;
         g.buf <- buf0;
-        g.enable_loc := enable_loc0;
         env0
+
     | `Concat (x, y) ->
-        let enable_loc0 = !(g.enable_loc) in
+        preserving_enable_loc g @@ fun () ->
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
@@ -729,7 +728,6 @@ and expand_node ?(top = false) g env0 (x : node) =
         let s = concat g.call_loc xs ys in
         Buffer.add_string buf0 s;
         g.buf <- buf0;
-        g.enable_loc := enable_loc0;
         env0
 
     | `Line (loc, opt_file, n) ->
