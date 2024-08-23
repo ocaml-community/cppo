@@ -552,65 +552,70 @@ let rec include_file g loc rel_file env =
 and expand_list ?(top = false) g env l =
   List.fold_left (expand_node ~top g) env l
 
+(* [expand_ident] is the special case of [expand_node] where the node is
+   an identifier [`Ident (loc, name, actuals)]. *)
+and expand_ident ~top g env0 loc name (actuals : actuals) =
+
+  let def = find_opt name env0 in
+  let g =
+    if top && def <> None || g.call_loc == dummy_loc then
+      { g with call_loc = loc }
+    else g
+  in
+
+  let enable_loc0 = !(g.enable_loc) in
+
+  if def <> None then (
+    g.require_location := true;
+
+    if not g.show_exact_locations then (
+      (* error reports will point more or less to the point
+         where the code is included rather than the source location
+         of the macro definition *)
+      maybe_print_location g (fst loc);
+      g.enable_loc := false
+    )
+  );
+
+  let env =
+    match def with
+
+    | None ->
+        (* There is no definition for the macro [name], so this is not
+           a macro application after all. Transform it back into text,
+           and process it. *)
+        expand_list g env0 (text loc name actuals)
+
+    | Some (EDef (_loc, formals, body, env)) ->
+        (* There is a definition for the macro [name], so this is a
+           macro application. *)
+        check_arity loc name formals actuals;
+        (* Extend the macro's captured environment [env] with bindings of
+           formals to actuals. Each actual captures the environment [env0]
+           that exists here, at the macro application site. *)
+        let env = bind_many formals (loc, actuals, env0) env in
+        (* Process the macro's body in this extended environment. *)
+        let (_ : env) = expand_node g env body in
+        (* Continue with our original environment. *)
+        env0
+
+  in
+
+  if def = None then
+    g.require_location := false
+  else
+    g.require_location := true;
+
+  (* restore initial setting *)
+  g.enable_loc := enable_loc0;
+
+  env
+
 and expand_node ?(top = false) g env0 (x : node) =
   match x with
-      `Ident (loc, name, actuals) ->
 
-        let def = find_opt name env0 in
-        let g =
-          if top && def <> None || g.call_loc == dummy_loc then
-            { g with call_loc = loc }
-          else g
-        in
-
-        let enable_loc0 = !(g.enable_loc) in
-
-        if def <> None then (
-          g.require_location := true;
-
-          if not g.show_exact_locations then (
-            (* error reports will point more or less to the point
-               where the code is included rather than the source location
-               of the macro definition *)
-            maybe_print_location g (fst loc);
-            g.enable_loc := false
-          )
-        );
-
-        let env =
-          match def with
-
-          | None ->
-              (* There is no definition for the macro [name], so this is not
-                 a macro application after all. Transform it back into text,
-                 and process it. *)
-              expand_list g env0 (text loc name actuals)
-
-          | Some (EDef (_loc, formals, body, env)) ->
-              (* There is a definition for the macro [name], so this is a
-                 macro application. *)
-              check_arity loc name formals actuals;
-              (* Extend the macro's captured environment [env] with bindings of
-                 formals to actuals. Each actual captures the environment [env0]
-                 that exists here, at the macro application site. *)
-              let env = bind_many formals (loc, actuals, env0) env in
-              (* Process the macro's body in this extended environment. *)
-              let (_ : env) = expand_node g env body in
-              (* Continue with our original environment. *)
-              env0
-
-        in
-
-        if def = None then
-          g.require_location := false
-        else
-          g.require_location := true;
-
-        (* restore initial setting *)
-        g.enable_loc := enable_loc0;
-
-        env
-
+    | `Ident (loc, name, actuals) ->
+        expand_ident ~top g env0 loc name actuals
 
     | `Def (loc, name, formals, body)->
         g.require_location := true;
