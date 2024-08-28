@@ -22,6 +22,7 @@ clean:
 # + check that everything has been committed
 # + check that the CI has succeeded
 # + check that [opam lint] is happy
+# + make sure that the package is not pinned: [opam pin remove cppo]
 # + create a tag, e.g. [git tag -a vX.Y.Z]
 # + run [make publishX.Y.Z]
 
