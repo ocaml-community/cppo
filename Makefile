@@ -23,7 +23,8 @@ clean:
 # + check that the CI has succeeded
 # + check that [opam lint] is happy
 # + make sure that the package is not pinned: [opam pin remove cppo]
-# + create a tag, e.g. [git tag -a vX.Y.Z]
+# + create a tag, e.g. [git tag vX.Y.Z]
+#   (the tag should not be annotated, as it shows up in [cppo -version])
 # + run [make publishX.Y.Z]
 
 publish%:
