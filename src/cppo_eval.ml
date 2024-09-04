@@ -585,8 +585,6 @@ and expand_ordinary_ident g env0 loc name actuals =
      and process it. *)
   let env = expand_list g env0 (text loc name actuals) in
 
-  g.require_location := false;
-
   env
 
 (* [expand_macro_application] is the special case of [expand_ident] where
