@@ -580,8 +580,6 @@ and expand_ordinary_ident g env0 loc name actuals =
     else g
   in
 
-  preserving_enable_loc g @@ fun () ->
-
   (* There is no definition for the macro [name], so this is not
      a macro application after all. Transform it back into text,
      and process it. *)
