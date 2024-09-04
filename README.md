@@ -531,7 +531,7 @@ a valid OCaml identifer with first character.
 
 For example,
 ```ocaml
-#define EVENT(n,ty) external CONCAT(on,CAPITALIZE(n)) : ty = STRINGIFY(n) [@@bs.val] 
+#define EVENT(n,ty) external CONCAT(on,CAPITALIZE(n)) : ty = STRINGIFY(n) [@@bs.val]
 EVENT(exit, unit -> unit)
 ```
 is expanded into:
