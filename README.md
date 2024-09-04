@@ -282,7 +282,7 @@ let forty_two =
 Thus, the application `APPLY(TWICE, ...)` is valid.
 This code is expanded into:
 
-```
+```ocaml
 let forty_two =
    (let x = (1+2+3+4+5+6) in (x + x))
 ```
