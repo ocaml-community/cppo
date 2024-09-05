@@ -1,3 +1,6 @@
+## v1.7.1 (2024-??-??)
+- [bug] Fix `cppo -version`, which used to print a blank line (#92).
+
 ## v1.7.0 (2024-08-22)
 - [+ui] Multi-line macros, without line terminators `\`,
         can now be defined using `#def` and `#enddef`.
