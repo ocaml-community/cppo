@@ -25,9 +25,6 @@ uninstall:
 # + run [make release VERSION=X.Y.Z]
 
 release:
-# Make sure the current version can be compiled.
-	@ make clean
-	@ make test
 # Check if this is the master branch.
 	@ if [ "$$(git symbolic-ref --short HEAD)" != "master" ] ; then \
 	  echo "Error: this is not the master branch." ; \
@@ -40,6 +37,9 @@ release:
 	    git status ; \
 	    exit 1 ; \
 	  fi
+# Make sure the current version can be compiled.
+	@ make clean
+	@ make test
 # Check the current package description.
 	@ opam lint
 # Make sure $(VERSION) is nonempty.
