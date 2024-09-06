@@ -567,20 +567,12 @@ and expand_ident ~top g env0 loc name (actuals : actuals) =
   let def = find_opt name env0 in
   match def with
   | None ->
-      expand_ordinary_ident g env0 loc name actuals
+      (* There is no definition for the macro [name], so this is not
+         a macro application after all. Transform it back into text,
+         and process it. *)
+      expand_list g env0 (text loc name actuals)
   | Some def ->
       expand_macro_application ~top g env0 loc name actuals def
-
-(* [expand_ordinary_ident] is the special case of [expand_ident] where
-   it turns out that the identifier [name] is not a macro. *)
-and expand_ordinary_ident g env0 loc name actuals =
-
-  (* There is no definition for the macro [name], so this is not
-     a macro application after all. Transform it back into text,
-     and process it. *)
-  let env = expand_list g env0 (text loc name actuals) in
-
-  env
 
 (* [expand_macro_application] is the special case of [expand_ident] where
    it turns out that the identifier [name] is a macro. *)
