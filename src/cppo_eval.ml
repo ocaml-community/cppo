@@ -575,12 +575,6 @@ and expand_ident ~top g env0 loc name (actuals : actuals) =
    it turns out that the identifier [name] is not a macro. *)
 and expand_ordinary_ident g env0 loc name actuals =
 
-  let g =
-    if g.call_loc == dummy_loc then
-      { g with call_loc = loc }
-    else g
-  in
-
   (* There is no definition for the macro [name], so this is not
      a macro application after all. Transform it back into text,
      and process it. *)
