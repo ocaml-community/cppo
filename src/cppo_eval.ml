@@ -349,7 +349,8 @@ let rec eval_bool env (x : bool_expr) =
 type globals = {
   call_loc : Cppo_types.loc;
     (* location used to set the value of
-       __FILE__ and __LINE__ global variables *)
+       __FILE__ and __LINE__ global variables;
+       also used in the expansion of CONCAT *)
 
   mutable buf : Buffer.t;
     (* buffer where the output is written *)
