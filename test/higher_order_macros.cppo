@@ -32,17 +32,22 @@ let forty_two = APPLY(ID, C )
   done\
 )
 
+(* In some of the examples that follow, #scope ... #endscope is used
+   to avoid the need to #undefine local macros such as BODY and F. *)
+
 (* Iteration over an array, with a normal loop. *)
 let iter f a =
+  #scope
   #define BODY(i) (f a.(i))
   LOOP(0, Array.length a, BODY)
-  #undef BODY
+  #endscope
 
 (* Iteration over an array, with an unrolled loop. *)
 let unrolled_iter f a =
+  #scope
   #define BODY(i) (f a.(i))
   UNROLLED_LOOP(0, Array.length a, BODY)
-  #undef BODY
+  #endscope
 
 (* Printing an array, with a normal loop. *)
 let print_int_array a =
