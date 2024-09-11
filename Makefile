@@ -59,7 +59,7 @@ release:
 	    exit 1 ; \
 	  fi
 # Create a git tag.
-	@ git tag -v$(VERSION)
+	@ git tag v$(VERSION)
 # Upload. (This automatically makes a .tar.gz archive available on github.)
 	@ git push
 	@ git push --tags
