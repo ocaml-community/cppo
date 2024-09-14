@@ -146,7 +146,7 @@ let warning loc s =
 
 let dummy_loc = (Lexing.dummy_pos, Lexing.dummy_pos)
 
-let node_loc node =
+let node_loc (node : node) : loc =
   match node with
   | `Ident (loc, _, _)
   | `Def (loc, _, _, _)

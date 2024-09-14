@@ -349,7 +349,8 @@ let rec eval_bool env (x : bool_expr) =
 type globals = {
   call_loc : Cppo_types.loc;
     (* location used to set the value of
-       __FILE__ and __LINE__ global variables *)
+       __FILE__ and __LINE__ global variables;
+       also used in the expansion of CONCAT *)
 
   mutable buf : Buffer.t;
     (* buffer where the output is written *)
@@ -381,7 +382,13 @@ type globals = {
     (* mapping from extension ID to pipeline command *)
 }
 
-
+(* [preserving_enable_loc g action] saves [g.enable_loc], runs [action()],
+   then restores [g.enable_loc]. The result of [action()] is returned. *)
+let preserving_enable_loc g action =
+  let enable_loc0 = !(g.enable_loc) in
+  let result = action() in
+  g.enable_loc := enable_loc0;
+  result
 
 let parse ~preserve_quotations file lexbuf =
   let lexer_env = Cppo_lexer.init ~preserve_quotations file lexbuf in
@@ -552,65 +559,63 @@ let rec include_file g loc rel_file env =
 and expand_list ?(top = false) g env l =
   List.fold_left (expand_node ~top g) env l
 
+(* [expand_ident] is the special case of [expand_node] where the node is
+   an identifier [`Ident (loc, name, actuals)]. *)
+and expand_ident ~top g env0 loc name (actuals : actuals) =
+
+  (* Test whether there exists a definition for the macro [name]. *)
+  let def = find_opt name env0 in
+  match def with
+  | None ->
+      (* There is no definition for the macro [name], so this is not
+         a macro application after all. Transform it back into text,
+         and process it. *)
+      expand_list g env0 (text loc name actuals)
+  | Some def ->
+      expand_macro_application ~top g env0 loc name actuals def
+
+(* [expand_macro_application] is the special case of [expand_ident] where
+   it turns out that the identifier [name] is a macro. *)
+and expand_macro_application ~top g env0 loc name actuals def =
+
+  let g =
+    if top || g.call_loc == dummy_loc then
+      { g with call_loc = loc }
+    else g
+  in
+
+  preserving_enable_loc g @@ fun () ->
+
+  g.require_location := true;
+
+  if not g.show_exact_locations then (
+    (* error reports will point more or less to the point
+       where the code is included rather than the source location
+       of the macro definition *)
+    maybe_print_location g (fst loc);
+    g.enable_loc := false
+  );
+
+  let EDef (_loc, formals, body, env) = def in
+  (* Check that this macro is applied to a correct number of arguments. *)
+  check_arity loc name formals actuals;
+  (* Extend the macro's captured environment [env] with bindings of
+     formals to actuals. Each actual captures the environment [env0]
+     that exists here, at the macro application site. *)
+  let env = bind_many formals (loc, actuals, env0) env in
+  (* Process the macro's body in this extended environment. *)
+  let (_ : env) = expand_node g env body in
+
+  g.require_location := true;
+
+  (* Continue with our original environment. *)
+  env0
+
 and expand_node ?(top = false) g env0 (x : node) =
   match x with
-      `Ident (loc, name, actuals) ->
 
-        let def = find_opt name env0 in
-        let g =
-          if top && def <> None || g.call_loc == dummy_loc then
-            { g with call_loc = loc }
-          else g
-        in
-
-        let enable_loc0 = !(g.enable_loc) in
-
-        if def <> None then (
-          g.require_location := true;
-
-          if not g.show_exact_locations then (
-            (* error reports will point more or less to the point
-               where the code is included rather than the source location
-               of the macro definition *)
-            maybe_print_location g (fst loc);
-            g.enable_loc := false
-          )
-        );
-
-        let env =
-          match def with
-
-          | None ->
-              (* There is no definition for the macro [name], so this is not
-                 a macro application after all. Transform it back into text,
-                 and process it. *)
-              expand_list g env0 (text loc name actuals)
-
-          | Some (EDef (_loc, formals, body, env)) ->
-              (* There is a definition for the macro [name], so this is a
-                 macro application. *)
-              check_arity loc name formals actuals;
-              (* Extend the macro's captured environment [env] with bindings of
-                 formals to actuals. Each actual captures the environment [env0]
-                 that exists here, at the macro application site. *)
-              let env = bind_many formals (loc, actuals, env0) env in
-              (* Process the macro's body in this extended environment. *)
-              let (_ : env) = expand_node g env body in
-              (* Continue with our original environment. *)
-              env0
-
-        in
-
-        if def = None then
-          g.require_location := false
-        else
-          g.require_location := true;
-
-        (* restore initial setting *)
-        g.enable_loc := enable_loc0;
-
-        env
-
+    | `Ident (loc, name, actuals) ->
+        expand_ident ~top g env0 loc name actuals
 
     | `Def (loc, name, formals, body)->
         g.require_location := true;
@@ -668,7 +673,7 @@ and expand_node ?(top = false) g env0 (x : node) =
         expand_list g env0 l
 
     | `Stringify x ->
-        let enable_loc0 = !(g.enable_loc) in
+        preserving_enable_loc g @@ fun () ->
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
@@ -676,11 +681,10 @@ and expand_node ?(top = false) g env0 (x : node) =
         ignore (expand_node g env0 x);
         stringify buf0 (Buffer.contents local_buf);
         g.buf <- buf0;
-        g.enable_loc := enable_loc0;
         env0
 
     | `Capitalize (x : node) ->
-        let enable_loc0 = !(g.enable_loc) in
+        preserving_enable_loc g @@ fun () ->
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
@@ -691,10 +695,10 @@ and expand_node ?(top = false) g env0 (x : node) =
           (* stringify buf0 (Buffer.contents local_buf); *)
         Buffer.add_string buf0 s ;
         g.buf <- buf0;
-        g.enable_loc := enable_loc0;
         env0
+
     | `Concat (x, y) ->
-        let enable_loc0 = !(g.enable_loc) in
+        preserving_enable_loc g @@ fun () ->
         g.enable_loc := false;
         let buf0 = g.buf in
         let local_buf = Buffer.create 100 in
@@ -707,7 +711,6 @@ and expand_node ?(top = false) g env0 (x : node) =
         let s = concat g.call_loc xs ys in
         Buffer.add_string buf0 s;
         g.buf <- buf0;
-        g.enable_loc := enable_loc0;
         env0
 
     | `Line (loc, opt_file, n) ->
