@@ -57,6 +57,7 @@ by a valid directive name or by a number:
 
 ```ocaml
 BLANK* "#" BLANK* ("def"|"enddef"|"define"|"undef"
+                  |"scope"|"endscope"
                   |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
                   |"include"
                   |"warning"|"error"
@@ -285,6 +286,25 @@ This code is expanded into:
 ```ocaml
 let forty_two =
    (let x = (1+2+3+4+5+6) in (x + x))
+```
+
+Scopes
+------
+When a block of text is delimited by `#scope ... #endscope`,
+all macro definitions (`#define`, `#def ... #enddef`)
+and undefinitions (`#undef`)
+become local:
+they take effect only within this block.
+
+```ocaml
+(* Here, assume that the macro FOO is not defined. *)
+#scope
+#define FOO "FOO is now defined"
+let x = FOO (* FOO expands to "FOO is now defined" *)
+#endscope
+(* Here, the macro FOO is again not defined. *)
+#define FOO 42
+let y = FOO (* FOO expands to 42 *)
 ```
 
 Conditionals
