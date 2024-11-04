@@ -642,6 +642,25 @@ and`.mlpack` files.  The following tags are available:
 * `cppo_V_OCAML` ≡ `-V OCAML:VERSION`, where `VERSION`
    is the version of OCaml that ocamlbuild uses.
 
+Balancing delimiters
+--------------------
+
+All delimiters,
+including scope delimiters (`#scope` and `#endscope`),
+delimiters of macro definitions (`#def` and `#enddef`),
+and delimiters of conditional constructs (`#if`, `#endif`, etc.),
+must be used in a well-balanced manner.
+
+This requirement does *not* apply separately to each category of delimiters.
+instead, it applies to all categories of delimiters at once.
+This is a stricter requirement.
+Thus, for example, `#scope` cannot be followed with `#endif`,
+and `#if` cannot be followed with `#endscope`.
+In other words,
+a scope cannot contain a fragment of a conditional construct,
+and a conditional construct cannot contain a fragment of a macro definition.
+
+
 Detailed command-line usage and options
 ---------------------------------------
 
