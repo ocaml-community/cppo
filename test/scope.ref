@@ -72,3 +72,60 @@ let z =
          42  
 # 56 "scope.cppo"
            (* expands to 42 *)
+
+(* Scopes can be nested. *)
+
+# 61 "scope.cppo"
+let x = 
+# 61 "scope.cppo"
+         0  
+# 61 "scope.cppo"
+              (* expands to 0 *)
+
+  
+# 65 "scope.cppo"
+  let y = 
+# 65 "scope.cppo"
+           1  
+# 65 "scope.cppo"
+                (* expands to 1 *)
+
+    
+# 69 "scope.cppo"
+    let z = 
+# 69 "scope.cppo"
+             2  
+# 69 "scope.cppo"
+                  (* expands to 2 *)
+  let _ = 
+# 71 "scope.cppo"
+           1  
+# 71 "scope.cppo"
+                (* expands to 1 *)
+let _ = 
+# 73 "scope.cppo"
+         0  
+# 73 "scope.cppo"
+              (* expands to 0 *)
+
+(* Another example of nesting. *)
+
+
+
+    
+# 81 "scope.cppo"
+    let message1 = 
+# 81 "scope.cppo"
+                    "Hello, "  
+# 81 "scope.cppo"
+                         ^ 
+# 81 "scope.cppo"
+                            "man" 
+  
+# 83 "scope.cppo"
+  (* Here, MAN is no longer defined, but HELLO still is. *)
+  let message2 = 
+# 84 "scope.cppo"
+                  "Hello, "  
+# 84 "scope.cppo"
+                       ^ "world"

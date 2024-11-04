@@ -307,6 +307,21 @@ let x = FOO (* FOO expands to "FOO is now defined" *)
 let y = FOO (* FOO expands to 42 *)
 ```
 
+Scopes can be nested,
+as illustrated by this example:
+
+```ocaml
+#scope
+  #define HELLO "Hello, "
+  #scope
+    #define MAN "man"
+    let message1 = HELLO ^ MAN
+  #endscope
+  (* Here, MAN is no longer defined, but HELLO still is. *)
+  let message2 = HELLO ^ "world"
+#endscope
+```
+
 Conditionals
 ------------
 

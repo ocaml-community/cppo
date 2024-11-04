@@ -54,3 +54,32 @@ let y = HI (* expands to 42 *)
 let qwd = HI (* HI is not recognized as a macro and expands to itself *)
 #endscope
 let z = HI (* expands to 42 *)
+
+(* Scopes can be nested. *)
+
+#define LEVEL 0
+let x = LEVEL (* expands to 0 *)
+#scope
+  #undef LEVEL
+  #define LEVEL 1
+  let y = LEVEL (* expands to 1 *)
+  #scope
+    #undef LEVEL
+    #define LEVEL 2
+    let z = LEVEL (* expands to 2 *)
+  #endscope
+  let _ = LEVEL (* expands to 1 *)
+#endscope
+let _ = LEVEL (* expands to 0 *)
+
+(* Another example of nesting. *)
+
+#scope
+  #define HELLO "Hello, "
+  #scope
+    #define MAN "man"
+    let message1 = HELLO ^ MAN
+  #endscope
+  (* Here, MAN is no longer defined, but HELLO still is. *)
+  let message2 = HELLO ^ "world"
+#endscope
