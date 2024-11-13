@@ -249,6 +249,18 @@ and directive e = parse
       { blank_until_eol e lexbuf;
         UNDEF (long_loc e, id) }
 
+  (* #scope opens a block, which we expect will be ended by #endscope.
+     It does not set [e.in_directive], so backslashes and newlines do
+     not receive special treatment. *)
+  | blank* "scope" dblank0
+      { e.in_directive <- false;
+        SCOPE (long_loc e) }
+
+  (* #endscope ends a block. *)
+  | blank* "endscope"
+      { blank_until_eol e lexbuf;
+        ENDSCOPE (long_loc e) }
+
   | blank* "if" dblank1    { e.lexer <- `Test;
                              IF (long_loc e) }
   | blank* "elif" dblank1  { e.lexer <- `Test;

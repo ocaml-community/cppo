@@ -92,6 +92,11 @@
  (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
 
 (rule
+ (targets scope.out)
+ (deps (:< scope.cppo))
+ (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
+
+(rule
  (targets higher_order_macros.out)
  (deps (:< higher_order_macros.cppo))
  (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
@@ -135,6 +140,9 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff lexical.ref lexical.out)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff scope.ref scope.out)))
 
 (rule (alias runtest) (package cppo)
       (action (diff higher_order_macros.ref higher_order_macros.out)))
@@ -273,3 +281,12 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff missing_enddef.ref missing_enddef.err)))
+
+(rule
+ (targets missing_endscope.err)
+ (deps (:< missing_endscope.cppo))
+ (action (with-stderr-to %{targets}
+   (with-accepted-exit-codes (not 0) (run %{bin:cppo} %{<})))))
+
+(rule (alias runtest) (package cppo)
+      (action (diff missing_endscope.ref missing_endscope.err)))

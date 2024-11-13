@@ -57,6 +57,7 @@ by a valid directive name or by a number:
 
 ```ocaml
 BLANK* "#" BLANK* ("def"|"enddef"|"define"|"undef"
+                  |"scope"|"endscope"
                   |"if"|"ifdef"|"ifndef"|"else"|"elif"|"endif"
                   |"include"
                   |"warning"|"error"
@@ -285,6 +286,40 @@ This code is expanded into:
 ```ocaml
 let forty_two =
    (let x = (1+2+3+4+5+6) in (x + x))
+```
+
+Scopes
+------
+When a block of text is delimited by `#scope ... #endscope`,
+all macro definitions (`#define`, `#def ... #enddef`)
+and undefinitions (`#undef`)
+become local:
+they take effect only within this block.
+
+```ocaml
+(* Here, assume that the macro FOO is not defined. *)
+#scope
+#define FOO "FOO is now defined"
+let x = FOO (* FOO expands to "FOO is now defined" *)
+#endscope
+(* Here, the macro FOO is again not defined. *)
+#define FOO 42
+let y = FOO (* FOO expands to 42 *)
+```
+
+Scopes can be nested,
+as illustrated by this example:
+
+```ocaml
+#scope
+  #define HELLO "Hello, "
+  #scope
+    #define MAN "man"
+    let message1 = HELLO ^ MAN
+  #endscope
+  (* Here, MAN is no longer defined, but HELLO still is. *)
+  let message2 = HELLO ^ "world"
+#endscope
 ```
 
 Conditionals
@@ -606,6 +641,25 @@ and`.mlpack` files.  The following tags are available:
 * `cppo_V(NAME:VERSION)` ≡ `-V NAME:VERSION`
 * `cppo_V_OCAML` ≡ `-V OCAML:VERSION`, where `VERSION`
    is the version of OCaml that ocamlbuild uses.
+
+Balancing delimiters
+--------------------
+
+All delimiters,
+including scope delimiters (`#scope` and `#endscope`),
+delimiters of macro definitions (`#def` and `#enddef`),
+and delimiters of conditional constructs (`#if`, `#endif`, etc.),
+must be used in a well-balanced manner.
+
+This requirement does *not* apply separately to each category of delimiters.
+instead, it applies to all categories of delimiters at once.
+This is a stricter requirement.
+Thus, for example, `#scope` cannot be followed with `#endif`,
+and `#if` cannot be followed with `#endscope`.
+In other words,
+a scope cannot contain a fragment of a conditional construct,
+and a conditional construct cannot contain a fragment of a macro definition.
+
 
 Detailed command-line usage and options
 ---------------------------------------

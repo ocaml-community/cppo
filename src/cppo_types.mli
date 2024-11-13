@@ -71,6 +71,7 @@ type node =
     | `Def of (loc * macro * formals * body)
          (* the list [formals] is empty if and only if no parentheses
             are used at this macro definition site. *)
+    | `Scope of body
     | `Undef of (loc * macro)
     | `Include of (loc * string)
     | `Ext of (loc * string * string)

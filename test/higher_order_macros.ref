@@ -22,21 +22,26 @@ let forty_two =
 (* A [for]-loop macro that performs unrolling. *)
 
 # 35 "higher_order_macros.cppo"
+(* In some of the examples that follow, #scope ... #endscope is used
+   to avoid the need to #undefine local macros such as BODY and F. *)
+
 (* Iteration over an array, with a normal loop. *)
 let iter f a =
+
   
-# 38 "higher_order_macros.cppo"
+# 42 "higher_order_macros.cppo"
    (
   for __index = 0 to  Array.length a-1 do
      (f a.(__index)) 
   done
 ) 
 
-# 41 "higher_order_macros.cppo"
+# 45 "higher_order_macros.cppo"
 (* Iteration over an array, with an unrolled loop. *)
 let unrolled_iter f a =
+
   
-# 44 "higher_order_macros.cppo"
+# 49 "higher_order_macros.cppo"
    (
   let __finish = ( Array.length a) in
   let __index = ref (0) in
@@ -51,25 +56,25 @@ let unrolled_iter f a =
   done
 ) 
 
-# 47 "higher_order_macros.cppo"
+# 52 "higher_order_macros.cppo"
 (* Printing an array, with a normal loop. *)
 let print_int_array a =
   
-# 50 "higher_order_macros.cppo"
+# 55 "higher_order_macros.cppo"
    (
   for __index = 0 to  Array.length a-1 do
      Printf.printf "%d" a.(__index) 
   done
 ) 
 
-# 52 "higher_order_macros.cppo"
+# 57 "higher_order_macros.cppo"
 (* A higher-order macro that produces a definition of [iter],
    and accepts an arbitrary definition of the macro [LOOP]. *)
 
-# 60 "higher_order_macros.cppo"
+# 65 "higher_order_macros.cppo"
 (* Some noise, which does not affect the above definitions. *)
 
-# 63 "higher_order_macros.cppo"
+# 68 "higher_order_macros.cppo"
  
   let iter f a = 
    (
@@ -77,7 +82,7 @@ let print_int_array a =
      (f a.(__index)) 
   done
 )  
-# 64 "higher_order_macros.cppo"
+# 69 "higher_order_macros.cppo"
  
   let unrolled_iter f a = 
    (

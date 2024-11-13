@@ -85,6 +85,7 @@ type node =
     | `Def of (loc * macro * formals * body)
          (* the list [formals] is empty if and only if no parentheses
             are used at this macro definition site. *)
+    | `Scope of body
     | `Undef of (loc * macro)
     | `Include of (loc * string)
     | `Ext of (loc * string * string)
@@ -146,7 +147,7 @@ let warning loc s =
 
 let dummy_loc = (Lexing.dummy_pos, Lexing.dummy_pos)
 
-let node_loc (node : node) : loc =
+let rec node_loc (node : node) : loc =
   match node with
   | `Ident (loc, _, _)
   | `Def (loc, _, _, _)
@@ -162,6 +163,8 @@ let node_loc (node : node) : loc =
   | `Current_line loc
   | `Current_file loc
       -> loc
+  | `Scope node ->
+      node_loc node
   | `Stringify _
   | `Capitalize _
   | `Concat (_, _)
