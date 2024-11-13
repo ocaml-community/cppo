@@ -1,5 +1,7 @@
 ## v1.7.1 (2024-??-??)
 - [bug] Fix `cppo -version`, which used to print a blank line (#92).
+- [+ui] Added the `-b` output binary option so that Windows does
+        not add CRLF endings.
 
 ## v1.7.0 (2024-08-22)
 - [+ui] Multi-line macros, without line terminators `\`,

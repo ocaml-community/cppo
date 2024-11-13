@@ -78,6 +78,7 @@ let main () =
   let preserve_quotations = ref false in
   let show_exact_locations = ref false in
   let show_no_locations = ref false in
+  let output_binary = ref false in
   let options = [
     "-D", Arg.String (fun s -> header := ("#define " ^ s ^ "\n") :: !header),
     "DEF
@@ -132,6 +133,10 @@ let main () =
     "
           Do not output any line directive other than those found in the
           input (overrides -s).";
+
+    "-b", Arg.Set output_binary,
+    "
+          Write output without CRLF normalization on Windows.";
 
     "-version", Arg.Unit (fun () ->
                             print_endline Cppo_version.cppo_version;
@@ -215,7 +220,10 @@ Options:" Sys.argv.(0) in
         print_string (Buffer.contents buf);
         flush stdout
     | Some file ->
-        let oc = open_out file in
+        let oc =
+          if !output_binary then open_out_bin file
+          else open_out file
+        in
         output_string oc (Buffer.contents buf);
         close_out oc
 
