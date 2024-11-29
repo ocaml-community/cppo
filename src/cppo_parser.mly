@@ -8,7 +8,7 @@
 %token < Cppo_types.loc * string option * int > LINE
 %token < Cppo_types.loc * Cppo_types.bool_expr > IFDEF
 %token < Cppo_types.loc * string * string > EXT
-%token < Cppo_types.loc > ENDEF IF ELIF ELSE ENDIF ENDTEST
+%token < Cppo_types.loc > ENDEF SCOPE ENDSCOPE IF ELIF ELSE ENDIF ENDTEST
 
 /* Boolean expressions in #if/#elif directives */
 %token TRUE FALSE DEFINED NOT AND OR EQ LT GT NE LE GE
@@ -134,6 +134,16 @@ node:
                   error loc "This #def is never closed: perhaps #enddef is missing" }
                 /* We include this rule in order to produce a good error message
                    when a #def has no matching #enddef. */
+
+| SCOPE body ENDSCOPE
+                { let body = `Seq $2 in
+                  `Scope body }
+
+| SCOPE body EOF
+                { let loc = $1 in
+                  error loc "This #scope is never closed: perhaps #endscope is missing" }
+                /* We include this rule in order to produce a good error message
+                   when a #scope has no matching #endscope. */
 
 | UNDEF
                 { `Undef $1 }

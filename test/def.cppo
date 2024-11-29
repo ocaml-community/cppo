@@ -44,34 +44,45 @@ let forty_two = APPLY(ID, C )
 )
 #enddef
 
+(* In the examples that follow, #scope ... #endscope is used to
+   avoid the need to #undefine local macros such as BODY and F. *)
+
 (* Iteration over an array, with a normal loop. *)
 let iter f a =
+  #scope
   #define BODY(i) (f a.(i))
   LOOP(0, Array.length a, BODY)
-  #undef BODY
+  #endscope
 
 (* Iteration over an array, with an unrolled loop. *)
 let unrolled_iter f a =
+  #scope
   #define BODY(i) (f a.(i))
   UNROLLED_LOOP(0, Array.length a, BODY)
-  #undef BODY
+  #endscope
 
 (* Printing an array, with a normal loop. *)
 let print_int_array a =
+  #scope
   #define F(i) Printf.printf "%d" a.(i)
   LOOP(0, Array.length a, F)
+  #endscope
 
 (* A higher-order macro that produces a definition of [iter],
    and accepts an arbitrary definition of the macro [LOOP]. *)
-#define BODY(i) (f a.(i))
 #def DEFINE_ITER(iter, LOOP : [..[.]])
+  #scope
+  #define BODY(i) (f a.(i))
   let iter f a =
-  LOOP(0, Array.length a, BODY)
+    LOOP(0, Array.length a, BODY)
+  #endscope
 #enddef
-#undef BODY
 
 (* Some noise, which does not affect the above definitions. *)
 #define BODY(i) "noise"
 
 DEFINE_ITER(iter, LOOP)
 DEFINE_ITER(unrolled_iter, UNROLLED_LOOP)
+
+(* Just because we can, undefine BODY. *)
+#undef BODY
