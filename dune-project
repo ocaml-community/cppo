@@ -1,6 +1,6 @@
 (lang dune 2.0)
 (name cppo)
-(version 1.7.0)
+(version 1.8.0)
 
 (generate_opam_files true)
 
