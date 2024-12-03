@@ -1,4 +1,4 @@
-## v1.8.0 (2024-??-??)
+## v1.8.0 (2024-12-03)
 - [+ui] A scope, delimited by `#scope ... #endscope`,
         limits the effect of `#define`, `#def ... #enddef`, and `#undef`.
 - [bug] Fix `cppo -version`, which used to print a blank line (#92).
