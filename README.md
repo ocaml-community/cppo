@@ -1,4 +1,4 @@
-[![Build status](https://github.com/ocaml-community/cppo/workflows/Build/badge.svg?branch=master)](https://github.com/ocaml-community/cppo/actions?query=workflow:Build)
+[![Build status](https://github.com/ocaml-community/cppo/actions/workflows/build.yml/badge.svg)](https://github.com/ocaml-community/cppo/actions/workflows/build.yml)
 
 Cppo: cpp for OCaml
 ===================
