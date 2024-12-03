@@ -64,4 +64,6 @@ release:
 	@ git push
 	@ git push --tags
 # Publish an opam description.
-	@ opam publish --tag=v$(VERSION) -v $(VERSION) ocaml-community/cppo
+# Note: the final '.' allows 'opam publish' to find our *.opam files
+# even though they are not included in the archive.
+	@ opam publish -v $(VERSION) https://github.com/ocaml-community/cppo/archive/v$(VERSION).tar.gz .
