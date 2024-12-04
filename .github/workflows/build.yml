@@ -155,7 +155,10 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: opam install --deps-only .
+        run: |
+          opam install dune
+          opam exec -- dune build cppo.opam cppo_ocamlbuild.opam
+          opam install --deps-only .
 
       - name: List installed packages
         run: opam list
