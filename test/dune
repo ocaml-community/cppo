@@ -111,6 +111,21 @@
  (deps (:< def.cppo))
  (action (with-stdout-to %{targets} (run %{bin:cppo} %{<}))))
 
+(rule
+ (target text.crlf.out.bin)
+ (deps (:< text.crlf.cppo.bin))
+ (action (with-stdout-to %{target} (run %{bin:cppo} %{<}))))
+
+(rule
+ (target text.lf.out.bin)
+ (deps (:< text.lf.cppo.bin))
+ (action (with-stdout-to %{target} (run %{bin:cppo} %{<}))))
+
+(rule
+ (target text_in_text_mode.lf.out.bin)
+ (deps (:< text_in_text_mode.lf.cppo.bin))
+ (action (with-stdout-to %{target} (run %{bin:cppo} -t %{<}))))
+
 (rule (alias runtest) (package cppo)
       (action (diff ext.ref ext.out)))
 
@@ -152,6 +167,17 @@
 
 (rule (alias runtest) (package cppo)
       (action (diff def.ref def.out)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff text.crlf.ref.bin text.crlf.out.bin)))
+
+(rule (alias runtest) (package cppo)
+      (action (diff text.lf.ref.bin text.lf.out.bin)))
+
+(rule (alias runtest) (package cppo) (enabled_if (= %{os_type} Win32))
+      (action (diff text_in_text_mode.crlf.ref.bin text_in_text_mode.lf.out.bin)))
+(rule (alias runtest) (package cppo) (enabled_if (<> %{os_type} Win32))
+      (action (diff text_in_text_mode.lf.ref.bin   text_in_text_mode.lf.out.bin)))
 
 ;; ---------------------------------------------------------------------------
 ;; Negative tests.

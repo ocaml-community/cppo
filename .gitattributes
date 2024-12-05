@@ -1,0 +1,6 @@
+*.crlf.cppo.bin text eol=crlf
+*.crlf.ref.bin text eol=crlf
+*.lf.cppo.bin text eol=lf
+*.lf.ref.bin text eol=lf
+
+*.sh text eol=lf
