@@ -13,13 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        setup-version:
-          - v2
-          - v3
         os:
-          - macos-13
+          - macos-15-intel
           - macos-latest
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - windows-latest
         ocaml-version:
           - 4.02.x
@@ -38,11 +36,8 @@ jobs:
           - 5.0.x
           - 5.1.x
           - 5.2.x
+          - 5.3.x
         exclude:
-          - os: macos-13
-            setup-version: v3 # opam uninstall fails
-          - os: macos-latest
-            setup-version: v2
           - os: macos-latest
             ocaml-version: 4.02.x
           - os: macos-latest
@@ -62,76 +57,43 @@ jobs:
           - os: macos-latest
             ocaml-version: 4.11.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.02.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.03.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.04.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.05.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.06.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.07.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.08.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.09.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.10.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.11.x
           - os: windows-latest
-            setup-version: v3
             ocaml-version: 4.12.x
-          - os: windows-latest
-            setup-version: v2
-            ocaml-version: 5.0.x
-          - os: windows-latest
-            setup-version: v2
-            ocaml-version: 5.1.x
-          - os: windows-latest
-            setup-version: v2
-            ocaml-version: 5.2.x
 
     runs-on: ${{ matrix.os }}
 
     env:
+      # https://github.com/fdopen/uwt/pull/6
+      # https://github.com/vbrankov/hdf5-ocaml/pull/29
+      # https://github.com/ocaml/opam/issues/6578
       SKIP_BUILD: |
-        dose
-        lilis
-        rotor
-        camlimages
-        freetds
-        frenetic
-        genprint
-        hdf5
-        ocp-index-top
-        pa_ppx
-        pla
-        ppx_deriving_rpc
-        reed-solomon-erasure
-        setr
-        stdcompat
-        uwt
+        uwt.0.3.3
+        hdf5.0.1.5
+        js_of_ocaml-compiler.3.4.0
+
       OPAMAUTOREMOVE: true
+      # https://github.com/ocaml/opam-repository/pull/28057#issuecomment-3031287384
       SKIP_TEST: |
-        0install
-        bisect_ppx
-        cconv-ppx
-        decompress
-        extlib-compat
-        General
+        pa_ppx.0.19
 
     steps:
       - name: Prepare git
@@ -142,14 +104,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup OCaml ${{ matrix.ocaml-version }} with v2
-        if: matrix.setup-version == 'v2'
-        uses: ocaml/setup-ocaml@v2
+      - name: Setup OCaml ${{ matrix.ocaml-version }} with archive
+        if: ${{ matrix.ocaml-version == '4.02.x' }}
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-version }}
+          opam-repositories: |
+            default: https://github.com/ocaml/opam-repository.git
+            archive: https://github.com/ocaml/opam-repository-archive.git
 
-      - name: Setup OCaml ${{ matrix.ocaml-version }} with v3
-        if: matrix.setup-version == 'v3'
+      - name: Setup OCaml ${{ matrix.ocaml-version }}
+        if: ${{ matrix.ocaml-version != '4.02.x' }}
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-version }}
@@ -177,10 +142,21 @@ jobs:
         run: opam install -t .
 
       - name: Test dependants
-        if: >
-          (matrix.ocaml-version >= '4.05') && (matrix.os != 'windows-latest')
+        if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          PACKAGES=`opam list -s --color=never --installable --depends-on cppo,cppo_ocamlbuild`
+          PACKAGES=$(opam list -a -s -V --color=never --installable --depends-on cppo,cppo_ocamlbuild | \
+            awk '{
+              if ($0 ~ /^cppo_ocamlbuild\./) next
+              line = $0
+              dot = match(line, /\./)
+              pkg = substr(line, 1, dot - 1)
+              seen[pkg] = line
+            }
+            END {
+              for (p in seen) {
+                print seen[p]
+              }
+            }')
           echo "Dependants:" $PACKAGES
           for PACKAGE in $PACKAGES
           do
@@ -193,9 +169,62 @@ jobs:
               echo ::group::Build          $PACKAGE) ||
               echo ::group::Build and test $PACKAGE
              DEPS_FAILED=false
-             (opam depext $PACKAGE &&
-              opam install --deps-only $PACKAGE) || DEPS_FAILED=true
+             opam install -t --deps-only $PACKAGE || DEPS_FAILED=true
              [ $DEPS_FAILED == false ] && opam install $PACKAGE
              echo ::endgroup::
              [ $DEPS_FAILED == false ] || echo Dependencies broken
           done
+
+      - name: Test dependants on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          $rawPackages = & opam list -a -s -V --color=never --installable --depends-on cppo,cppo_ocamlbuild
+          $packageMap = @{}
+
+          foreach ($line in $rawPackages) {
+              if ($line -match '^(.*?)[.]') {
+                  $pkg = $matches[1]
+                  if ($pkg -ne "cppo_ocamlbuild") {
+                    $packageMap[$pkg] = $line
+                  }
+              }
+          }
+
+          $packages = $packageMap.Values
+          Write-Host "Dependants: $($packages -join ' ')"
+
+          foreach ($package in $packages) {
+              $skipBuildList = $env:SKIP_BUILD -split ' '
+              if ($skipBuildList -contains $package) {
+                  Write-Host "Skip $package"
+                  continue
+              }
+
+              $opamWithTest = $true
+              $skipTestList = $env:SKIP_TEST -split ' '
+              if ($skipTestList -contains $package) {
+                  $opamWithTest = $false
+              }
+
+              if (-not $opamWithTest) {
+                  Write-Host "::group::Build          $package"
+              } else {
+                  Write-Host "::group::Build and test $package"
+              }
+
+              $depsFailed = $false
+              try {
+                  & opam install --deps-only $package
+              } catch {
+                  $depsFailed = $true
+              }
+
+              if (-not $depsFailed) {
+                  & opam install $package
+              } else {
+                  Write-Host "Dependencies broken"
+              }
+
+              Write-Host "::endgroup::"
+          }
+
