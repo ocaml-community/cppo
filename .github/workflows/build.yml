@@ -140,7 +140,7 @@ jobs:
           git config --global init.defaultBranch master
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup OCaml ${{ matrix.ocaml-version }} with v2
         if: matrix.setup-version == 'v2'
