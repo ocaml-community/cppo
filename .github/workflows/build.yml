@@ -167,7 +167,7 @@ jobs:
         run: opam exec -- make
 
       - name: Upload the build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.os }}-${{ matrix.ocaml-version }}-cppo.exe
           path: _build/default/src/cppo_main.exe
