@@ -1,3 +1,8 @@
+## Pending
+
+- [+ui] Added the `-t` output text option so that Windows does
+        not add CRLF endings. Default is now binary output.
+
 ## v1.8.0 (2024-12-03)
 - [+ui] A scope, delimited by `#scope ... #endscope`,
         limits the effect of `#define`, `#def ... #enddef`, and `#undef`.
